@@ -1,6 +1,13 @@
+#env
 .venv/
 __pycache__/
 *.pyc
 .env
+
+#html
 *.html
 !landing/example.html
+
+# Logs
+logs/
+*.log
