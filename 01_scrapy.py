@@ -13,6 +13,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 
+# Diretório do projeto
+BASE_DIR = Path(__file__).resolve().parent
+
+
 # Configuração do logging
 logging.basicConfig(
     level=logging.INFO,
@@ -22,16 +26,20 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-load_dotenv()
+# Carrega o .env do projeto
+load_dotenv(BASE_DIR / ".env")
 
 URL_DATA1 = os.getenv("URL_DATA1")
+
+if not URL_DATA1:
+    raise RuntimeError("A variável URL_DATA1 não foi encontrada no .env")
 
 
 def salva_dados(html, nome_tabela):
     """
     Salva o HTML recebido na pasta landing.
     """
-    pasta = Path("landing")
+    pasta = BASE_DIR / "landing"
     pasta.mkdir(exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -77,11 +85,11 @@ def buscar_tabela(driver, xpath, nome_tabela):
         return None
 
 
-# Configura o Chrome
+# Configura o Chrome/Chromium
 options = Options()
 options.add_argument("--lang=pt-BR")
 options.add_argument("--window-size=1920,1080")
-
+options.add_argument("--headless=new")
 
 driver = webdriver.Chrome(options=options)
 
@@ -95,6 +103,7 @@ try:
         "//h2[contains(normalize-space(), 'Manobras previstas')]/following::table[1]",
         "manobras_previstas"
     )
+
     if manobras_previstas:
         salva_dados(manobras_previstas, "manobras_previstas")
 
@@ -104,9 +113,10 @@ try:
         "//h2[normalize-space()='Navios Atracados']/following::table[1]",
         "navios_atracados"
     )
+
     if navios_atracados:
         salva_dados(navios_atracados, "navios_atracados")
-        
+
     # Busca Navios Fundeados
     navios_fundeados = buscar_tabela(
         driver,
@@ -126,7 +136,7 @@ try:
 
     if navios_previstos:
         salva_dados(navios_previstos, "navios_previstos")
-        
+
     # Busca Manobras Realizadas
     manobras_realizadas = buscar_tabela(
         driver,
@@ -140,4 +150,3 @@ try:
 finally:
     driver.quit()
     logger.info("Navegador fechado")
-
