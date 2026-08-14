@@ -29,15 +29,20 @@ for i, tabela in enumerate(tabelas):
 
     if "Navio" in tabela.columns and "Manobra" in tabela.columns:
         print(f"Encontramos a tabela de manobras na posicao: {i}")
-        df_manobras = tabela
+        df = tabela
         break
 
 #%%
-print(f'valor de i = {i}')
-print(f'valor de tabela = {tabela}')
-#%%
-print(f'valor de # %%
 
+df = df.rename(columns={
+    'HorÃ¡rio': "Horario",
+    'BerÃ§o': "Berco",
+    'SituaÃ§Ã£o': "Situacao",
+})
+
+df.head(10)
+df.columns
+#%%
 
 colunas_manobras = [
     "Data",
