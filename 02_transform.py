@@ -1,12 +1,16 @@
-# %%
+#%%
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 from io import StringIO
+print("import")
+#%%
 
+# Diretório do projeto
+BASE_DIR = Path(__file__).resolve().parent
 
 # Diretório onde estão os arquivos de origem
-pasta = Path("landing")
+pasta = BASE_DIR / "landing"
 
 
 # Procura arquivos de manobras previstas
@@ -76,17 +80,10 @@ if df is None:
         "Tabela de manobras não encontrada no HTML."
     )
 
-#%%
-print(df.head(10))
-print("-xxx--xxxxx--xxx--xxxxx--xxx--xxxxx-")
-print("-xxx--xxxxx--xxx--xxxxx--xxx--xxxxx-")
-#%%
+
 df.columns = df.columns.str.lower()
 
-#%%
-df.dtypes
-#%%
-df
+
 colunas = ['data', 'horário', 'manobra', 'berço', 'bordo', 'navio',
             'rota', 'calado', 'situação']
 
@@ -103,8 +100,28 @@ df[colunas] = df[colunas].apply(
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
 
-# Visualiza os primeiros registros
-print(df.head(10))
-print("-xxx--xxxxx--xxx--xxxxx--xxx--xxxxx-")
-print("-xxx--xxxxx--xxx--xxxxx--xxx--xxxxx-")
-# %%
+#%% criar a onde a camada silver vai ser salva
+
+
+SILVER_DIR = BASE_DIR / "silver"
+
+pasta_saida = SILVER_DIR / "manobras_previstas"
+
+pasta_saida.mkdir(
+    parents=True,
+    exist_ok=True
+)
+
+snapshot = arquivo.stem.removesuffix(
+    "_manobras_previstas"
+)
+
+arquivo_saida = pasta_saida / f"{snapshot}.parquet"
+
+df.to_parquet(
+    arquivo_saida,
+    engine="pyarrow",
+    index=False
+)
+
+print(f"Parquet salvo em: {arquivo_saida}")
