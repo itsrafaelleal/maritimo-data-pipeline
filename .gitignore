@@ -9,7 +9,11 @@ __pycache__/
 
 #html
 *.html
-!landing/example.html
+!landing/navios_previstos_example.html
+!landing/navios_fundeados_example.html
+!landing/navios_atracados_example.html
+!landing/manobras_realizadas_example.html
+!landing/manobras_previstas_example.html
 
 #parquet
 silver/
