@@ -1,4 +1,4 @@
-> Projeto em construção – ❌ - Projeto em construção – ❌ - Projeto em construção – ❌ -
+>  ❌ Projeto em construção – ❌ - Projeto em construção – ❌ - Projeto em construção – ❌ -
 
 # Marítimo Data Pipeline
 
@@ -6,8 +6,8 @@ Pipeline de dados que coleta, transforma e modela informações operacionais de 
 
 O projeto implementa as camadas landing (HTML bruto) e silver (Parquet normalizado), com transformação em Python/pandas, e está preparado para evoluir para modelos analíticos (gold) e dashboards de operações portuárias.
 
-**Tecnologias:** Python, Selenium, pandas, Parquet, VS Code, Git/GitHub.
+**Tecnologias:** Python, Selenium, pandas, Parquet, VS Code, Git/GitHub.  Orquetração com airflow. Computação em nuvem.
 
 **Objetivo:** Servir como portfólio em Engenharia de Dados / Analytics Engineering, demonstrando pipeline ETL, modelagem de dados e capacidade de gerar insights sobre operações portuárias.
 
-> Projeto em construção – em breve: camada gold, métricas de confiabilidade de previsão e dashboard no Power BI.
+> >  ❌ Projeto em construção – ❌ - Projeto em construção – ❌ - Projeto em construção – ❌ -Projeto em construção – em breve: camada gold, métricas de confiabilidade de previsão e dashboard no Power BI.
