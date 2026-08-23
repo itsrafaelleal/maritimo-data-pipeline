@@ -1,7 +1,7 @@
 [project]
 name = "maritimo-data-pipeline"
 version = "0.1.0"
-description = "Add your description here"
+description = "Pipeline de dados para coleta e transformação de dados operacionais portuários (manobras, navios atracados/fundeados)"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
