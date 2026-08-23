@@ -11,9 +11,9 @@ BASE_DIR = Path(__file__).resolve().parent
 # Diretório onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
-tabela_atual = "manobras_realizadas"
+tabela_atual = "navios_atracados"
 
-# Procura arquivos de manobras realizadas
+# Procura arquivos de atracado realizadas
 arquivos = pasta.glob(
     f"*{tabela_atual}.html"
 )
@@ -56,42 +56,22 @@ html = html.encode("latin1").decode("utf-8")
 # para que o pandas possa fazer a leitura
 tabelas = pd.read_html(StringIO(html))
 
-
 print(f"Tabelas encontradas: {len(tabelas)}")
 
+df = tabelas[0]
+col = df.columns
+print("df colunas ="f'{col}')
 
-# Procura a tabela de manobras
-df = None
-
-for i, tabela in enumerate(tabelas):
-
-    if "Navio" in tabela.columns and "Manobra" in tabela.columns:
-        print(
-            f"Encontramos a tabela de manobras na posição: {i}"
-        )
-
-        df = tabela
-        break
-
-
-# Valida se a tabela foi encontrada
-if df is None:
-    raise ValueError(
-        "Tabela de manobras não encontrada no HTML."
-    )
-
-#%%        ####    CRIA COLUNAS NOVAS    ####
+#%%       ####    CRIA COLUNAS NOVAS    ####
 
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
-df["hora"] = pd.to_datetime(
-    df["arquivo_origem"].str[:19],
-    format="%Y-%m-%d_%H-%M-%S",
-    errors="coerce"
-)
+
+
 
 # normalizar e limpar o cabecalho do df
 
+df = df.rename(columns={"Data - Hora": "data_atracagem"})
 df.columns = df.columns.str.lower()
 df.columns = [
     unicodedata.normalize('NFKD', col)
@@ -102,11 +82,9 @@ df.columns = [
 print("## NOME DAS COLUNAS ##")
 print(df.columns)
 
-
 #%%  ### NORMALIMAZAR DADOS ###
 
-colunas = ['data', 'navio', 'manobra', 'berco', 'horario', 'calado',
-       'rota', 'bordo', 'rebocadores']
+colunas = ['berco', 'bordo', 'navio', 'data_atracagem','arquivo_origem']
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
                      .str.replace('[éèêëÉÈÊË]', 'e', regex=True)
@@ -119,14 +97,13 @@ df[colunas] = df[colunas].apply(
 
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
-df["hora"] = pd.to_datetime(
-    df["arquivo_origem"].str[:19],
-    format="%Y-%m-%d_%H-%M-%S",
-    errors="coerce"
-)
-print(" ### AMOSTRA DOS DADOS")
+
+print(" ### AMOSTRA DOS DADOS\n")
+
 print(df.head(2))
-print(" ### AMOSTRA DOS DADOS")
+
+print("\n ### ")
+
 #%% ### CRIAR SILVER E SALVA 
 
 SILVER_DIR = BASE_DIR / "silver"
