@@ -5,10 +5,10 @@ from pathlib import Path
 from datetime import datetime
 from io import StringIO
 
-# Diretório do projeto
+# Pasta do projeto
 BASE_DIR = Path(__file__).resolve().parent
 
-# Diretório onde estão os arquivos de origem
+# Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
 tabela_atual = "navios_atracados"
@@ -54,6 +54,7 @@ html = html.encode("latin1").decode("utf-8")
 
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
+
 tabelas = pd.read_html(StringIO(html))
 
 print(f"Tabelas encontradas: {len(tabelas)}")
