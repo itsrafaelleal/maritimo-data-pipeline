@@ -100,13 +100,6 @@ df[colunas] = df[colunas].apply(
                      .str.lower()
 )
 
-df["data_processamento"] = datetime.now()
-df["arquivo_origem"] = arquivo.name
-df["hora"] = pd.to_datetime(
-    df["arquivo_origem"].str[:19],
-    format="%Y-%m-%d_%H-%M-%S",
-    errors="coerce"
-)
 print(" ### AMOSTRA DOS DADOS")
 print(df.head(2))
 print(" ### AMOSTRA DOS DADOS")
