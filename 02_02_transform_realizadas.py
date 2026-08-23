@@ -1,11 +1,9 @@
 #%%
 import pandas as pd
-
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from io import StringIO
-print("import")
-#%%
 
 # Diretório do projeto
 BASE_DIR = Path(__file__).resolve().parent
@@ -13,11 +11,11 @@ BASE_DIR = Path(__file__).resolve().parent
 # Diretório onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
-tipos_tabela = ["manobras_previstas.html", "manobras_realizadas.html", "navios_atracados.html", "navios_fundeados.html", "navios_previstos.html"]
+tabela_atual = "manobras_realizadas"
 
-# Procura arquivos de manobras previstas
-arquivos_manobras_previstas = pasta.glob(
-    "*manobras_previstas.html"
+# Procura arquivos de manobras realizadas
+arquivos = pasta.glob(
+    f"*{tabela_atual}.html"
 )
 
 # Data de hoje
@@ -28,7 +26,7 @@ today = datetime.now().strftime("%Y-%m-%d")
 arquivo = next(
     (
         arquivo
-        for arquivo in arquivos_manobras_previstas
+        for arquivo in arquivos
         if arquivo.name.startswith(today)
     ),
     None
@@ -81,14 +79,33 @@ if df is None:
     raise ValueError(
         "Tabela de manobras não encontrada no HTML."
     )
+#%%        ####    CRIA COLUNAS NOVAS    ####
 
+df["data_processamento"] = datetime.now()
+df["arquivo_origem"] = arquivo.name
+df["hora"] = pd.to_datetime(
+    df["arquivo_origem"].str[:19],
+    format="%Y-%m-%d_%H-%M-%S",
+    errors="coerce"
+)
+
+# normalizar e limpar o cabecalho do df
 
 df.columns = df.columns.str.lower()
+df.columns = [
+    unicodedata.normalize('NFKD', col)
+    .encode('ascii', 'ignore')
+    .decode('utf-8')
+    for col in df.columns
+]
+print("## NOME DAS COLUNAS ##")
+print(df.columns)
 
 
-colunas = ['data', 'horário', 'manobra', 'berço', 'bordo', 'navio',
-            'rota', 'calado', 'situação']
+#%%  ### NORMALIMAZAR DADOS ###
 
+colunas = ['data', 'navio', 'manobra', 'berco', 'horario', 'calado',
+       'rota', 'bordo', 'rebocadores']
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
                      .str.replace('[éèêëÉÈÊË]', 'e', regex=True)
@@ -101,13 +118,19 @@ df[colunas] = df[colunas].apply(
 
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
+df["hora"] = pd.to_datetime(
+    df["arquivo_origem"].str[:19],
+    format="%Y-%m-%d_%H-%M-%S",
+    errors="coerce"
+)
 
-#%% criar a onde a camada silver vai ser salva
+print(df.head(2))
 
+#%% ### CRIAR SILVER E SALVA 
 
 SILVER_DIR = BASE_DIR / "silver"
 
-pasta_saida = SILVER_DIR / "manobras_previstas"
+pasta_saida = SILVER_DIR / f"{tabela_atual}"
 
 pasta_saida.mkdir(
     parents=True,
@@ -115,7 +138,7 @@ pasta_saida.mkdir(
 )
 
 snapshot = arquivo.stem.removesuffix(
-    "_manobras_previstas"
+    f"{tabela_atual}"
 )
 
 arquivo_saida = pasta_saida / f"{snapshot}.parquet"
@@ -125,5 +148,4 @@ df.to_parquet(
     engine="pyarrow",
     index=False
 )
-
 print(f"Parquet salvo em: {arquivo_saida}")

@@ -1,11 +1,10 @@
 #%%
 import pandas as pd
-
+import unicodedata
 from pathlib import Path
 from datetime import datetime
 from io import StringIO
-print("import")
-#%%
+
 
 # Diretório do projeto
 BASE_DIR = Path(__file__).resolve().parent
@@ -13,10 +12,10 @@ BASE_DIR = Path(__file__).resolve().parent
 # Diretório onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
-
+tabela_atual = "manobras_previstas"
 # Procura arquivos de manobras previstas
-arquivos_manobras_previstas = pasta.glob(
-    "*_manobras_previstas.html"
+arquivos = pasta.glob(
+    f"*{tabela_atual}.html"
 )
 
 # Data de hoje
@@ -27,7 +26,7 @@ today = datetime.now().strftime("%Y-%m-%d")
 arquivo = next(
     (
         arquivo
-        for arquivo in arquivos_manobras_previstas
+        for arquivo in arquivos
         if arquivo.name.startswith(today)
     ),
     None
@@ -81,12 +80,27 @@ if df is None:
         "Tabela de manobras não encontrada no HTML."
     )
 
+# normalizar e limpar o cabecalho do df
 
 df.columns = df.columns.str.lower()
+df.columns = [
+    unicodedata.normalize('NFKD', col)
+    .encode('ascii', 'ignore')
+    .decode('utf-8')
+    for col in df.columns
+]
+# cria colunas dividir a coluna horario em duas
 
+df[['hora', 'status']] = df['horario'].str.extract(
+    r'(?:(\d{2}:\d{2})\s+)?(\w+)'
+)
+print("## NOME DAS COLUNAS ##")
+print(df.columns)
 
-colunas = ['data', 'horário', 'manobra', 'berço', 'bordo', 'navio',
-            'rota', 'calado', 'situação']
+#%%  ### NORMALIMAZAR DADOS ###
+
+colunas = ['data', 'horario', 'manobra', 'berco', 'bordo', 'navio', 'rota',
+            'calado', 'situacao', 'hora', 'status']
 
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
@@ -101,7 +115,7 @@ df[colunas] = df[colunas].apply(
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
 
-#%% criar a onde a camada silver vai ser salva
+#%% ### CRIAR SILVER E SALVA 
 
 
 SILVER_DIR = BASE_DIR / "silver"

@@ -6,9 +6,27 @@ from datetime import datetime
 # Diretório do projeto
 BASE_DIR = Path(__file__).resolve().parent
 
+# Diretório onde estão os arquivos de origem
+pasta = BASE_DIR / "landing"
+
+tipos_tabela = ["manobras_previstas.html", "manobras_realizadas.html", "navios_atracados.html", "navios_fundeados.html", "navios_previstos.html"]
+
+# Procura arquivos de manobras previstas
+arquivos_manobras_previstas = pasta.glob(
+    "*manobras_realizadas.html"
+)
+
+# Data de hoje
 today = datetime.now().strftime("%Y-%m-%d")
 
-# Caminho usando BASE_DIR
-parquet = BASE_DIR / "silver" / "manobras_previstas" / f"{today}_16-39-56.parquet"
 
-df = pd.read_parquet(parquet)
+# Encontra o arquivo referente à data de hoje
+arquivo = next(
+    (
+        arquivo
+        for arquivo in arquivos_manobras_previstas
+        if arquivo.name.startswith(today)
+    ),
+    None
+)
+# %%
