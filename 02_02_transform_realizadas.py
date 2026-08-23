@@ -5,10 +5,10 @@ from pathlib import Path
 from datetime import datetime
 from io import StringIO
 
-# Diretório do projeto
+# Pasta do projeto
 BASE_DIR = Path(__file__).resolve().parent
 
-# Diretório onde estão os arquivos de origem
+# Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
 tabela_atual = "manobras_realizadas"
@@ -54,31 +54,14 @@ html = html.encode("latin1").decode("utf-8")
 
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
-tabelas = pd.read_html(StringIO(html))
 
+tabelas = pd.read_html(StringIO(html))
 
 print(f"Tabelas encontradas: {len(tabelas)}")
 
-
-# Procura a tabela de manobras
-df = None
-
-for i, tabela in enumerate(tabelas):
-
-    if "Navio" in tabela.columns and "Manobra" in tabela.columns:
-        print(
-            f"Encontramos a tabela de manobras na posição: {i}"
-        )
-
-        df = tabela
-        break
-
-
-# Valida se a tabela foi encontrada
-if df is None:
-    raise ValueError(
-        "Tabela de manobras não encontrada no HTML."
-    )
+df = tabelas[0]
+col = df.columns
+print("df colunas ="f'{col}')
 
 #%%        ####    CRIA COLUNAS NOVAS    ####
 

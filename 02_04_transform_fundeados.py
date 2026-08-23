@@ -5,10 +5,10 @@ from pathlib import Path
 from datetime import datetime
 from io import StringIO
 
-# Diretório do projeto
+# Pasta do projeto
 BASE_DIR = Path(__file__).resolve().parent
 
-# Diretório onde estão os arquivos de origem
+# Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
 tabela_atual = "navios_fundeados"
@@ -94,9 +94,6 @@ df[colunas] = df[colunas].apply(
                      .str.replace('[çÇ]', 'c', regex=True)
                      .str.lower()
 )
-
-df["data_processamento"] = datetime.now()
-df["arquivo_origem"] = arquivo.name
 
 print(" ### AMOSTRA DOS DADOS\n")
 

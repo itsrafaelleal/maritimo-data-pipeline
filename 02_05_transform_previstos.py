@@ -5,15 +5,15 @@ from pathlib import Path
 from datetime import datetime
 from io import StringIO
 
-
 # Pasta do projeto
 BASE_DIR = Path(__file__).resolve().parent
 
 # Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing"
 
-tabela_atual = "manobras_previstas"
-# Procura arquivos de manobras previstas
+tabela_atual = "navios_previstos"
+
+# Procura arquivos de atracado realizadas
 arquivos = pasta.glob(
     f"*{tabela_atual}.html"
 )
@@ -55,14 +55,18 @@ html = html.encode("latin1").decode("utf-8")
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
 tabelas = pd.read_html(StringIO(html))
-
 print(f"Tabelas encontradas: {len(tabelas)}")
 
 df = tabelas[0]
 col = df.columns
 print("df colunas ="f'{col}')
 
-# normalizar e limpar o cabecalho do df
+#%%       ####    CRIA COLUNAS NOVAS    ####
+
+df["data_processamento"] = datetime.now()
+df["arquivo_origem"] = arquivo.name
+
+# normalizar e limpar o cabecalho do df e define str
 
 df.columns = df.columns.str.lower()
 df.columns = [
@@ -71,18 +75,15 @@ df.columns = [
     .decode('utf-8')
     for col in df.columns
 ]
-# cria colunas dividir a coluna horario em duas
-
-df[['hora', 'status']] = df['horario'].str.extract(
-    r'(?:(\d{2}:\d{2})\s+)?(\w+)'
-)
+df[['rota', 'rebocadores']] = df[['rota', 'rebocadores']].astype(str)
 print("## NOME DAS COLUNAS ##")
 print(df.columns)
 
 #%%  ### NORMALIMAZAR DADOS ###
 
-colunas = ['data', 'horario', 'manobra', 'berco', 'bordo', 'navio', 'rota',
-            'calado', 'situacao', 'hora', 'status']
+
+colunas = ['navio', 'calado', 'rota', 'previsao de chegada', 
+           'rebocadores', 'arquivo_origem']
 
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
@@ -94,15 +95,15 @@ df[colunas] = df[colunas].apply(
                      .str.lower()
 )
 
-df["data_processamento"] = datetime.now()
-df["arquivo_origem"] = arquivo.name
+print(" ### AMOSTRA DOS DADOS\n")
+print(df.head(2))
+print("\n ### ")
 
 #%% ### CRIAR SILVER E SALVA 
 
-
 SILVER_DIR = BASE_DIR / "silver"
 
-pasta_saida = SILVER_DIR / "manobras_previstas"
+pasta_saida = SILVER_DIR / f"{tabela_atual}"
 
 pasta_saida.mkdir(
     parents=True,
@@ -110,7 +111,7 @@ pasta_saida.mkdir(
 )
 
 snapshot = arquivo.stem.removesuffix(
-    "_manobras_previstas"
+    f"{tabela_atual}"
 )
 
 arquivo_saida = pasta_saida / f"{snapshot}.parquet"
@@ -120,5 +121,6 @@ df.to_parquet(
     engine="pyarrow",
     index=False
 )
-
 print(f"Parquet salvo em: {arquivo_saida}")
+
+# %%
