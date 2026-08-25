@@ -2,7 +2,6 @@
 
 Este arquivo reúne aprendizados, decisões técnicas e problemas encontrados durante o desenvolvimento do projeto.
 
----
 
 ## 1. Arquivos com prefixos numéricos na raiz
 
