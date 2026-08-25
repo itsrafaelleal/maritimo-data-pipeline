@@ -6,6 +6,8 @@ Pipeline de dados desenvolvido para coletar, transformar e organizar informaçõ
 
 O pipeline realiza a coleta de dados por meio de **Web Scraping com Selenium**, processa e normaliza as informações em Python e gera **snapshots a cada 4 horas**, permitindo análises de **previsão vs. realizado** ao longo do tempo.
 
+> **📚 Leia :** [aprendizados.md](aprendizados.md) — Documento com todos os aprendizados, desafios e decisões técnicas do projeto. **Essencial para entender a evolução do pipeline.**
+
 ##  Arquitetura
 
 Atualmente, o projeto trabalha com arquitetura medalhão:
