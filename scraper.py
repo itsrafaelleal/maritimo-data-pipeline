@@ -37,10 +37,10 @@ if not URL_DATA1:
 
 def salva_dados(html, nome_tabela):
     """
-    Salva o HTML recebido na pasta landing.
+    Salva o HTML recebido na pasta landing_raw.
     """
-    pasta = BASE_DIR / "landing"
-    pasta.mkdir(exist_ok=True)
+    pasta = BASE_DIR / "landing_raw"
+    pasta.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 

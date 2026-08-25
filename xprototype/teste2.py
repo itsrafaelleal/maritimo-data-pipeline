@@ -7,8 +7,7 @@ from datetime import datetime
 BASE_DIR = Path(__file__).resolve().parent
 
 # Diretório onde estão os arquivos de origem
-pasta = BASE_DIR / "landing"
-
+pasta = BASE_DIR.parent / "landing_raw"
 tipos_tabela = ["manobras_previstas.html", "manobras_realizadas.html", "navios_atracados.html", "navios_fundeados.html", "navios_previstos.html"]
 
 # Procura arquivos de manobras previstas

@@ -12,11 +12,9 @@ O pipeline realiza a coleta de dados por meio de **Web Scraping com Selenium**, 
 
 Atualmente, o projeto trabalha com arquitetura medalhão:
 
-### 🟤 Landing
-
+### 🟤 Landing Raw (`landing_raw/`)
 Responsável pelo armazenamento dos dados brutos coletados durante o Web Scraping.
 
-* Dados no formato HTML;
 * Preservação do dado original;
 * Snapshots periódicos;
 * Base para reprocessamento e auditoria.

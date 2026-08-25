@@ -9,8 +9,7 @@ from io import StringIO
 BASE_DIR = Path(__file__).resolve().parent
 
 # Pasta onde estão os arquivos de origem
-pasta = BASE_DIR / "landing"
-
+pasta = BASE_DIR / "landing_raw"
 tabela_atual = "manobras_realizadas"
 
 # Procura arquivos de manobras realizadas
