@@ -9,9 +9,8 @@ from io import StringIO
 BASE_DIR = Path(__file__).resolve().parent
 
 # Pasta onde estão os arquivos de origem
-pasta = BASE_DIR / "landing"
-
-tabela_atual = "navios_atracados"
+pasta = BASE_DIR / "landing_raw"
+tabela_atual = "navios_fundeados"
 
 # Procura arquivos de atracado realizadas
 arquivos = pasta.glob(
@@ -54,7 +53,6 @@ html = html.encode("latin1").decode("utf-8")
 
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
-
 tabelas = pd.read_html(StringIO(html))
 
 print(f"Tabelas encontradas: {len(tabelas)}")
@@ -72,7 +70,7 @@ df["arquivo_origem"] = arquivo.name
 
 # normalizar e limpar o cabecalho do df
 
-df = df.rename(columns={"Data - Hora": "data_atracagem"})
+df = df.rename(columns={"Data - Hora": "data_fundeado"})
 df.columns = df.columns.str.lower()
 df.columns = [
     unicodedata.normalize('NFKD', col)
@@ -85,7 +83,7 @@ print(df.columns)
 
 #%%  ### NORMALIMAZAR DADOS ###
 
-colunas = ['berco', 'bordo', 'navio', 'data_atracagem','arquivo_origem']
+colunas = ['navio', 'posicao', 'calado', 'data_fundeado', 'arquivo_origem']
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
                      .str.replace('[éèêëÉÈÊË]', 'e', regex=True)
@@ -95,9 +93,6 @@ df[colunas] = df[colunas].apply(
                      .str.replace('[çÇ]', 'c', regex=True)
                      .str.lower()
 )
-
-df["data_processamento"] = datetime.now()
-df["arquivo_origem"] = arquivo.name
 
 print(" ### AMOSTRA DOS DADOS\n")
 
@@ -128,3 +123,5 @@ df.to_parquet(
     index=False
 )
 print(f"Parquet salvo em: {arquivo_saida}")
+
+# %%

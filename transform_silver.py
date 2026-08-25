@@ -12,7 +12,7 @@ import pandas as pd
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent
-LANDING_DIR = BASE_DIR / "landing"
+LANDING_DIR = BASE_DIR / "landing_raw"
 SILVER_DIR = BASE_DIR / "silver"
 
 logging.basicConfig(
@@ -232,11 +232,11 @@ def processar_todos_arquivos(
                                  não possuem o respectivo Parquet na Silver.
     """
     if not LANDING_DIR.exists():
-        logger.error("Pasta landing não encontrada em: %s", LANDING_DIR)
+        logger.error("Pasta landing_raw não encontrada em: %s", LANDING_DIR)
         return
 
     arquivos_html = sorted(LANDING_DIR.glob("*.html"))
-    logger.info("Total de arquivos HTML encontrados na Landing: %d", len(arquivos_html))
+    logger.info("Total de arquivos HTML encontrados na landing_raw: %d", len(arquivos_html))
 
     processados = 0
     ignorados = 0
