@@ -6,13 +6,13 @@ from datetime import datetime
 from io import StringIO
 
 # Pasta do projeto
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing_raw"
-tabela_atual = "navios_fundeados"
+tabela_atual = "manobras_realizadas"
 
-# Procura arquivos de atracado realizadas
+# Procura arquivos de manobras realizadas
 arquivos = pasta.glob(
     f"*{tabela_atual}.html"
 )
@@ -53,6 +53,7 @@ html = html.encode("latin1").decode("utf-8")
 
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
+
 tabelas = pd.read_html(StringIO(html))
 
 print(f"Tabelas encontradas: {len(tabelas)}")
@@ -61,16 +62,18 @@ df = tabelas[0]
 col = df.columns
 print("df colunas ="f'{col}')
 
-#%%       ####    CRIA COLUNAS NOVAS    ####
+#%%        ####    CRIA COLUNAS NOVAS    ####
 
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
-
-
+df["hora"] = pd.to_datetime(
+    df["arquivo_origem"].str[:19],
+    format="%Y-%m-%d_%H-%M-%S",
+    errors="coerce"
+)
 
 # normalizar e limpar o cabecalho do df
 
-df = df.rename(columns={"Data - Hora": "data_fundeado"})
 df.columns = df.columns.str.lower()
 df.columns = [
     unicodedata.normalize('NFKD', col)
@@ -81,9 +84,11 @@ df.columns = [
 print("## NOME DAS COLUNAS ##")
 print(df.columns)
 
+
 #%%  ### NORMALIMAZAR DADOS ###
 
-colunas = ['navio', 'posicao', 'calado', 'data_fundeado', 'arquivo_origem']
+colunas = ['data', 'navio', 'manobra', 'berco', 'horario', 'calado',
+       'rota', 'bordo', 'rebocadores']
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
                      .str.replace('[éèêëÉÈÊË]', 'e', regex=True)
@@ -94,12 +99,9 @@ df[colunas] = df[colunas].apply(
                      .str.lower()
 )
 
-print(" ### AMOSTRA DOS DADOS\n")
-
+print(" ### AMOSTRA DOS DADOS")
 print(df.head(2))
-
-print("\n ### ")
-
+print(" ### AMOSTRA DOS DADOS")
 #%% ### CRIAR SILVER E SALVA 
 
 SILVER_DIR = BASE_DIR / "silver"
@@ -123,5 +125,3 @@ df.to_parquet(
     index=False
 )
 print(f"Parquet salvo em: {arquivo_saida}")
-
-# %%

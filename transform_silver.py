@@ -4,7 +4,7 @@ import logging
 import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, Optional
+from typing import Optional
 
 import pandas as pd
 
@@ -42,10 +42,10 @@ def normalizar_texto(valor: object) -> object:
 
 
 def padronizar_colunas(df: pd.DataFrame) -> pd.DataFrame:
-
-    # Normaliza os nomes das colunas: remove acentos, substitui espaços
-    # por underscores e converte para minúsculo (snake_case).
-
+    """
+    Normaliza os nomes das colunas: remove acentos, substitui espaços
+    por underscores e converte para minúsculo (snake_case).
+    """
     novas_colunas = []
     for col in df.columns:
         col_limpa = normalizar_texto(col)
@@ -61,25 +61,106 @@ def padronizar_colunas(df: pd.DataFrame) -> pd.DataFrame:
 def _transformar_manobras_previstas(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
     Regra específica para 'manobras_previstas':
-    Extrai hora e status a partir do campo 'horario'.
+    1. Extrai hora e status a partir do campo 'horario'.
+    2. Cria o timestamp completo 'data_hora_manobra'.
+    3. Força os tipos de dados via dicionário de esquema.
     """
+    # 1. Extração de hora e status
     if "horario" in df.columns:
-        # Extrai horário (HH:MM) e status textual (ex: ATS, ATB, ETS, etc.)
         df[["hora", "status"]] = df["horario"].str.extract(
             r"(?:(\d{2}:\d{2})\s+)?(\w+)"
         )
+
+    # 2. Criação da coluna unificada 'data_hora_manobra'
+    if "data" in df.columns and "hora" in df.columns:
+        df["data_hora_manobra"] = pd.to_datetime(
+            df["data"].astype(str) + " " + df["hora"].astype(str),
+            format="%d/%m/%Y %H:%M",
+            errors="coerce"
+        )
+
+    # 3. Conversão da coluna 'data' isolada para datetime
+    if "data" in df.columns:
+        df["data"] = pd.to_datetime(df["data"], format="%d/%m/%Y", errors="coerce")
+
+    # 4. Conversão numérica de LOA e BOCA
+    for col_num in ["loa", "boca"]:
+        if col_num in df.columns:
+            df[col_num] = pd.to_numeric(
+                df[col_num].astype(str).str.replace(",", "."),
+                errors="coerce"
+            ).astype("Int64")
+
+    # 5. Dicionário para forçar os tipos textuais das demais colunas
+    tipos_texto = {
+        "horario": "string",
+        "manobra": "string",
+        "berco": "string",
+        "bordo": "string",
+        "navio": "string",
+        "rota": "string",
+        "calado": "string",
+        "situacao": "string",
+        "hora": "string",
+        "status": "string",
+    }
+    for col, tipo in tipos_texto.items():
+        if col in df.columns:
+            df[col] = df[col].astype(tipo)
+
     return df
 
 
 def _transformar_manobras_realizadas(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
     Regra específica para 'manobras_realizadas':
-    Converte horário de snapshot e garante tipos de texto.
+    1. Extrai hora e status a partir do campo 'horario'.
+    2. Cria o timestamp completo 'data_hora_realizada'.
+    3. Força os tipos de dados via dicionário de esquema.
     """
-    # Garante tipo textual para rebocadores e rota se existirem
-    for col in ["rebocadores", "rota"]:
+    # 1. Extração de hora e status do campo 'horario' (ex: '15:15 ATB')
+    if "horario" in df.columns:
+        df[["hora", "status"]] = df["horario"].str.extract(
+            r"(?:(\d{2}:\d{2})\s+)?(\w+)"
+        )
+
+    # 2. Criação da coluna unificada 'data_hora_realizada'
+    if "data" in df.columns and "hora" in df.columns:
+        df["data_hora_realizada"] = pd.to_datetime(
+            df["data"].astype(str) + " " + df["hora"].astype(str),
+            format="%d/%m/%Y %H:%M",
+            errors="coerce"
+        )
+
+    # 3. Conversão da coluna 'data' isolada para datetime
+    if "data" in df.columns:
+        df["data"] = pd.to_datetime(df["data"], format="%d/%m/%Y", errors="coerce")
+
+    # 4. Conversão numérica de LOA e BOCA
+    for col_num in ["loa", "boca"]:
+        if col_num in df.columns:
+            df[col_num] = pd.to_numeric(
+                df[col_num].astype(str).str.replace(",", "."),
+                errors="coerce"
+            ).astype("Int64")
+
+    # 5. Dicionário para forçar os tipos textuais das demais colunas
+    tipos_texto = {
+        "navio": "string",
+        "manobra": "string",
+        "berco": "string",
+        "horario": "string",
+        "calado": "string",
+        "rota": "string",
+        "bordo": "string",
+        "rebocadores": "string",
+        "hora": "string",
+        "status": "string",
+    }
+    for col, tipo in tipos_texto.items():
         if col in df.columns:
-            df[col] = df[col].astype(str)
+            df[col] = df[col].astype(tipo)
+
     return df
 
 
@@ -105,12 +186,8 @@ def _transformar_navios_fundeados(df: pd.DataFrame, arquivo_origem: str) -> pd.D
 
 def _transformar_navios_previstos(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
-    Regra específica para 'navios_previstos':
-    Garante conversão segura de campos opcionais.
+    Regra específica para 'navios_previstos'.
     """
-    for col in ["rota", "rebocadores"]:
-        if col in df.columns:
-            df[col] = df[col].astype(str)
     return df
 
 
@@ -125,15 +202,15 @@ REGRAS_TABELAS = {
 
 
 # ==============================================================================
-# 4. FUNÇÃO GENÉRICA DE PROCESSAMENTO (LANDING -> SILVER)
+# 4. FUNÇÃO GENÉRICA DE PROCESSAMENTO (LANDING_RAW -> SILVER)
 # ==============================================================================
 def processar_arquivo_html(caminho_arquivo: Path) -> Optional[Path]:
     """
-    Função genérica e idempotente que transforma um arquivo HTML da Landing
+    Função genérica e idempotente que transforma um arquivo HTML da Landing Raw
     em um arquivo Parquet normalizado na Silver.
 
     Args:
-        caminho_arquivo (Path): Caminho completo do arquivo HTML na landing.
+        caminho_arquivo (Path): Caminho completo do arquivo HTML na landing_raw.
 
     Returns:
         Optional[Path]: Caminho do arquivo Parquet gerado na Silver, ou None se falhar.
@@ -177,15 +254,14 @@ def processar_arquivo_html(caminho_arquivo: Path) -> Optional[Path]:
     # 2. Padronização dos Cabeçalhos
     df = padronizar_colunas(df)
 
-    # 3. Aplicação da transformação específica da tabela (se existir)
+    # 3. Normalização inicial de texto em todas as colunas
+    for col in df.columns:
+        df[col] = df[col].apply(normalizar_texto).astype("string")
+
+    # 4. Aplicação da transformação específica da tabela (onde tipos específicos e novas colunas são aplicados)
     funcao_transformacao = REGRAS_TABELAS.get(tipo_tabela)
     if funcao_transformacao:
         df = funcao_transformacao(df, caminho_arquivo.name)
-
-    # 4. Normalização de texto nos dados (remoção de acentos e minúsculas)
-    colunas_texto = df.select_dtypes(include=["object", "string"]).columns
-    for col in colunas_texto:
-        df[col] = df[col].apply(normalizar_texto)
 
     # 5. Adição de Metadados de Auditoria e Linhagem (Data Lineage)
     df["data_processamento"] = datetime.now()
@@ -227,7 +303,7 @@ def processar_todos_arquivos(
 
     Args:
         data_filtro (str, opcional): Prefixo de data no formato 'YYYY-MM-DD'.
-                                     Se None, avalia todos os arquivos da landing.
+                                     Se None, avalia todos os arquivos da landing_raw.
         apenas_pendentes (bool): Se True, processa apenas arquivos HTML que ainda
                                  não possuem o respectivo Parquet na Silver.
     """
@@ -275,5 +351,5 @@ def processar_todos_arquivos(
 # 6. BLOCO PRINCIPAL PARA EXECUÇÃO DIRETA OU VIA AIRFLOW
 # ==============================================================================
 if __name__ == "__main__":
-    # Processa todos os arquivos pendentes da pasta landing
+    # Processa apenas os arquivos pendentes da pasta landing_raw
     processar_todos_arquivos(apenas_pendentes=True)
