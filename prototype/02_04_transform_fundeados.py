@@ -6,11 +6,11 @@ from datetime import datetime
 from io import StringIO
 
 # Pasta do projeto
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Pasta onde estão os arquivos de origem
 pasta = BASE_DIR / "landing_raw"
-tabela_atual = "navios_previstos"
+tabela_atual = "navios_fundeados"
 
 # Procura arquivos de atracado realizadas
 arquivos = pasta.glob(
@@ -54,6 +54,7 @@ html = html.encode("latin1").decode("utf-8")
 # Converte o texto HTML em um objeto semelhante a arquivo
 # para que o pandas possa fazer a leitura
 tabelas = pd.read_html(StringIO(html))
+
 print(f"Tabelas encontradas: {len(tabelas)}")
 
 df = tabelas[0]
@@ -65,8 +66,11 @@ print("df colunas ="f'{col}')
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
 
-# normalizar e limpar o cabecalho do df e define str
 
+
+# normalizar e limpar o cabecalho do df
+
+df = df.rename(columns={"Data - Hora": "data_fundeado"})
 df.columns = df.columns.str.lower()
 df.columns = [
     unicodedata.normalize('NFKD', col)
@@ -74,16 +78,12 @@ df.columns = [
     .decode('utf-8')
     for col in df.columns
 ]
-df[['rota', 'rebocadores']] = df[['rota', 'rebocadores']].astype(str)
 print("## NOME DAS COLUNAS ##")
 print(df.columns)
 
 #%%  ### NORMALIMAZAR DADOS ###
 
-
-colunas = ['navio', 'calado', 'rota', 'previsao de chegada', 
-           'rebocadores', 'arquivo_origem']
-
+colunas = ['navio', 'posicao', 'calado', 'data_fundeado', 'arquivo_origem']
 df[colunas] = df[colunas].apply(
     lambda col: col.str.replace('[áàãâäÁÀÃÂÄ]', 'a', regex=True)
                      .str.replace('[éèêëÉÈÊË]', 'e', regex=True)
@@ -95,7 +95,9 @@ df[colunas] = df[colunas].apply(
 )
 
 print(" ### AMOSTRA DOS DADOS\n")
+
 print(df.head(2))
+
 print("\n ### ")
 
 #%% ### CRIAR SILVER E SALVA 

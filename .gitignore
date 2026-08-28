@@ -16,8 +16,9 @@ __pycache__/
 !landing_raw/manobras_previstas_example.html
 
 #parquet
-silver/
 *.parquet
+silver/**/*.parquet
+!silver/**/*_example.parquet
 !*_example.parquet
 
 # Logs
