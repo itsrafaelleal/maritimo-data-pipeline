@@ -62,7 +62,7 @@ def _transformar_manobras_previstas(df: pd.DataFrame, arquivo_origem: str) -> pd
     """
     Regra específica para 'manobras_previstas':
     1. Extrai hora e status a partir do campo 'horario'.
-    2. Cria o timestamp completo 'data_hora_manobra'.
+    2. Cria o timestamp completo 'data_hora_manobra_prevista'.
     3. Força os tipos de dados via dicionário de esquema.
     """
     # 1. Extração de hora e status
@@ -71,9 +71,9 @@ def _transformar_manobras_previstas(df: pd.DataFrame, arquivo_origem: str) -> pd
             r"(?:(\d{2}:\d{2})\s+)?(\w+)"
         )
 
-    # 2. Criação da coluna unificada 'data_hora_manobra'
+    # 2. Criação da coluna unificada 'data_hora_manobra_prevista'
     if "data" in df.columns and "hora" in df.columns:
-        df["data_hora_manobra"] = pd.to_datetime(
+        df["data_hora_manobra_prevista"] = pd.to_datetime(
             df["data"].astype(str) + " " + df["hora"].astype(str),
             format="%d/%m/%Y %H:%M",
             errors="coerce"
@@ -115,7 +115,7 @@ def _transformar_manobras_realizadas(df: pd.DataFrame, arquivo_origem: str) -> p
     """
     Regra específica para 'manobras_realizadas':
     1. Extrai hora e status a partir do campo 'horario'.
-    2. Cria o timestamp completo 'data_hora_realizada'.
+    2. Cria o timestamp completo 'data_hora_manobra_realizada'.
     3. Força os tipos de dados via dicionário de esquema.
     """
     # 1. Extração de hora e status do campo 'horario' (ex: '15:15 ATB')
@@ -124,9 +124,9 @@ def _transformar_manobras_realizadas(df: pd.DataFrame, arquivo_origem: str) -> p
             r"(?:(\d{2}:\d{2})\s+)?(\w+)"
         )
 
-    # 2. Criação da coluna unificada 'data_hora_realizada'
+    # 2. Criação da coluna unificada 'data_hora_manobra_realizada'
     if "data" in df.columns and "hora" in df.columns:
-        df["data_hora_realizada"] = pd.to_datetime(
+        df["data_hora_manobra_realizada"] = pd.to_datetime(
             df["data"].astype(str) + " " + df["hora"].astype(str),
             format="%d/%m/%Y %H:%M",
             errors="coerce"
@@ -167,27 +167,63 @@ def _transformar_manobras_realizadas(df: pd.DataFrame, arquivo_origem: str) -> p
 def _transformar_navios_atracados(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
     Regra específica para 'navios_atracados':
-    Renomeia coluna de data/hora de atracagem.
+    1. Renomeia e converte coluna de data/hora de atracagem.
+    2. Adiciona a coluna 'situacao' como 'atracado'.
     """
     if "data_hora" in df.columns:
-        df = df.rename(columns={"data_hora": "data_atracagem"})
+        df = df.rename(columns={"data_hora": "data_hora_atracagem"})
+    
+    if "data_hora_atracagem" in df.columns:
+        df["data_hora_atracagem"] = pd.to_datetime(
+            df["data_hora_atracagem"],
+            format="%d/%m/%Y - %H:%M",
+            errors="coerce"
+        )
+
+    df["situacao"] = "atracado"
+    df["situacao"] = df["situacao"].astype("string")
     return df
 
 
 def _transformar_navios_fundeados(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
     Regra específica para 'navios_fundeados':
-    Renomeia coluna de data/hora de fundeio.
+    1. Renomeia e converte coluna de data/hora de fundeio.
+    2. Adiciona a coluna 'situacao' como 'fundeado'.
     """
     if "data_hora" in df.columns:
-        df = df.rename(columns={"data_hora": "data_fundeado"})
+        df = df.rename(columns={"data_hora": "data_hora_fundeado"})
+    
+    if "data_hora_fundeado" in df.columns:
+        df["data_hora_fundeado"] = pd.to_datetime(
+            df["data_hora_fundeado"],
+            format="%d/%m/%Y - %H:%M",
+            errors="coerce"
+        )
+
+    df["situacao"] = "fundeado"
+    df["situacao"] = df["situacao"].astype("string")
     return df
 
 
 def _transformar_navios_previstos(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
-    Regra específica para 'navios_previstos'.
+    Regra específica para 'navios_previstos':
+    1. Renomeia e converte coluna de data/hora de previsão de chegada.
+    2. Adiciona a coluna 'situacao' como 'chegada_prevista'.
     """
+    if "previsao_de_chegada" in df.columns:
+        df = df.rename(columns={"previsao_de_chegada": "data_hora_previsao_de_chegada"})
+    
+    if "data_hora_previsao_de_chegada" in df.columns:
+        df["data_hora_previsao_de_chegada"] = pd.to_datetime(
+            df["data_hora_previsao_de_chegada"],
+            format="%d/%m/%Y - %H:%M",
+            errors="coerce"
+        )
+
+    df["situacao"] = "chegada_prevista"
+    df["situacao"] = df["situacao"].astype("string")
     return df
 
 
