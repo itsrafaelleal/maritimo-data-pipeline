@@ -11,7 +11,8 @@ import pandas as pd
 # ==============================================================================
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
 # ==============================================================================
-BASE_DIR = Path(__file__).resolve().parent
+# Sobe da pasta 'prototype/' para a raiz do projeto
+BASE_DIR = Path(__file__).resolve().parent.parent
 LANDING_DIR = BASE_DIR / "landing_raw"
 SILVER_DIR = BASE_DIR / "silver"
 
@@ -56,7 +57,7 @@ def padronizar_colunas(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ==============================================================================
-# 3. REGRAS DE TRANSFORMAÇÃO ESPECÍFICAS POR TABELA
+# 3. REGRAS DE TRANSFORMAÇÃO ESPECÍFICAS POR TABELA (IGUAIS AO TRANSFORM_SILVER)
 # ==============================================================================
 def _transformar_manobras_previstas(df: pd.DataFrame, arquivo_origem: str) -> pd.DataFrame:
     """
@@ -238,15 +239,15 @@ REGRAS_TABELAS = {
 
 
 # ==============================================================================
-# 4. FUNÇÃO GENÉRICA DE PROCESSAMENTO (LANDING_RAW -> SILVER)
+# 4. FUNÇÃO DE PROCESSAMENTO DE ARQUIVOS DE EXEMPLO
 # ==============================================================================
-def processar_arquivo_html(caminho_arquivo: Path) -> Optional[Path]:
+def processar_arquivo_example(caminho_arquivo: Path) -> Optional[Path]:
     """
-    Função genérica e idempotente que transforma um arquivo HTML da Landing Raw
-    em um arquivo Parquet normalizado na Silver.
+    Transforma um arquivo *_example.html da Landing Raw em um arquivo Parquet
+    normalizado dentro da respectiva pasta na Silver (ex: silver/manobras_previstas/manobras_previstas_example.parquet).
 
     Args:
-        caminho_arquivo (Path): Caminho completo do arquivo HTML na landing_raw.
+        caminho_arquivo (Path): Caminho completo do arquivo *_example.html.
 
     Returns:
         Optional[Path]: Caminho do arquivo Parquet gerado na Silver, ou None se falhar.
@@ -255,31 +256,31 @@ def processar_arquivo_html(caminho_arquivo: Path) -> Optional[Path]:
         logger.error("Arquivo não encontrado: %s", caminho_arquivo)
         return None
 
-    # Identifica o tipo de tabela pelo nome do arquivo
-    # Ex: '2026-08-23_16-00-06_manobras_previstas.html' -> 'manobras_previstas'
+    # Identifica o tipo de tabela pelo nome do arquivo de exemplo
+    # Ex: 'manobras_previstas_example.html' -> 'manobras_previstas'
     tipo_tabela = None
     for tabela in REGRAS_TABELAS.keys():
-        if caminho_arquivo.name.endswith(f"{tabela}.html"):
+        if caminho_arquivo.name.startswith(tabela) and caminho_arquivo.name.endswith("example.html"):
             tipo_tabela = tabela
             break
 
     if not tipo_tabela:
         logger.warning(
-            "Arquivo '%s' não corresponde a nenhuma tabela configurada. Ignorando.",
+            "Arquivo '%s' não corresponde a nenhum padrão *_example.html configurado. Ignorando.",
             caminho_arquivo.name,
         )
         return None
 
-    logger.info("Iniciando processamento de [%s]: %s", tipo_tabela, caminho_arquivo.name)
+    logger.info("Iniciando processamento do exemplo [%s]: %s", tipo_tabela, caminho_arquivo.name)
 
-    # 1. Leitura com encoding UTF-8 direto
+    # 1. Leitura com encoding UTF-8
     try:
         with open(caminho_arquivo, "r", encoding="utf-8") as f:
             html_content = f.read()
 
         tabelas = pd.read_html(io.StringIO(html_content))
         if not tabelas:
-            logger.warning("Nenhuma tabela encontrada no HTML: %s", caminho_arquivo.name)
+            logger.warning("Nenhuma tabela encontrada no HTML de exemplo: %s", caminho_arquivo.name)
             return None
 
         df = tabelas[0]
@@ -294,98 +295,52 @@ def processar_arquivo_html(caminho_arquivo: Path) -> Optional[Path]:
     for col in df.columns:
         df[col] = df[col].apply(normalizar_texto).astype("string")
 
-    # 4. Aplicação da transformação específica da tabela (onde tipos específicos e novas colunas são aplicados)
+    # 4. Aplicação da transformação específica da tabela
     funcao_transformacao = REGRAS_TABELAS.get(tipo_tabela)
     if funcao_transformacao:
         df = funcao_transformacao(df, caminho_arquivo.name)
 
-    # 5. Adição de Metadados de Auditoria e Linhagem (Data Lineage)
+    # 5. Adição de Metadados de Linhagem (Data Lineage)
     df["data_processamento"] = datetime.now()
     df["arquivo_origem"] = caminho_arquivo.name
+    df["snapshot_timestamp"] = pd.NaT  # Arquivos de exemplo não possuem data de snapshot no nome
 
-    # Extrai o timestamp do snapshot do nome do arquivo (ex: '2026-08-23_16-00-06')
-    timestamp_snapshot_str = caminho_arquivo.name[:19]
-    try:
-        df["snapshot_timestamp"] = pd.to_datetime(
-            timestamp_snapshot_str, format="%Y-%m-%d_%H-%M-%S"
-        )
-    except Exception:
-        df["snapshot_timestamp"] = pd.NaT
-
-    # 6. Salvamento na camada Silver (Parquet)
+    # 6. Salvamento na pasta da respectiva tabela na camada Silver
     pasta_destino = SILVER_DIR / tipo_tabela
     pasta_destino.mkdir(parents=True, exist_ok=True)
 
-    # O nome do parquet mantém o timestamp do snapshot para idempotência
-    # Ex: '2026-08-23_16-00-06_manobras_previstas.html' -> '2026-08-23_16-00-06.parquet'
-    snapshot_nome = caminho_arquivo.stem.removesuffix(f"_{tipo_tabela}")
-    arquivo_saida = pasta_destino / f"{snapshot_nome}.parquet"
+    # Salva como {tipo_tabela}_example.parquet
+    arquivo_saida = pasta_destino / f"{tipo_tabela}_example.parquet"
 
     df.to_parquet(arquivo_saida, engine="pyarrow", index=False)
-    logger.info("Sucesso! Parquet salvo em: %s (Total de linhas: %d)", arquivo_saida, len(df))
+    logger.info("Sucesso! Exemplo Parquet salvo em: %s (Total de linhas: %d)", arquivo_saida, len(df))
 
     return arquivo_saida
 
 
 # ==============================================================================
-# 5. PROCESSAMENTO EM LOTE (OU FILTRO POR DATA / ARQUIVOS PENDENTES)
+# 5. EXECUÇÃO EM LOTE PARA TODOS OS ARQUIVOS DE EXEMPLO
 # ==============================================================================
-def processar_todos_arquivos(
-    data_filtro: Optional[str] = None,
-    apenas_pendentes: bool = True
-) -> None:
+def processar_todos_examples() -> None:
     """
-    Executa a transformação em lote da camada Landing para a camada Silver.
-
-    Args:
-        data_filtro (str, opcional): Prefixo de data no formato 'YYYY-MM-DD'.
-                                     Se None, avalia todos os arquivos da landing_raw.
-        apenas_pendentes (bool): Se True, processa apenas arquivos HTML que ainda
-                                 não possuem o respectivo Parquet na Silver.
+    Localiza e processa todos os arquivos *_example.html da Landing Raw.
     """
     if not LANDING_DIR.exists():
         logger.error("Pasta landing_raw não encontrada em: %s", LANDING_DIR)
         return
 
-    arquivos_html = sorted(LANDING_DIR.glob("*.html"))
-    logger.info("Total de arquivos HTML encontrados na landing_raw: %d", len(arquivos_html))
+    arquivos_example = sorted(LANDING_DIR.glob("*_example.html"))
+    logger.info("Total de arquivos *_example.html encontrados na landing_raw: %d", len(arquivos_example))
 
     processados = 0
-    ignorados = 0
-
-    for arq in arquivos_html:
-        # Filtra por data caso informado
-        if data_filtro and not arq.name.startswith(data_filtro):
-            continue
-
-        # Se apenas_pendentes estiver ativo, verifica se já existe na Silver
-        if apenas_pendentes:
-            tipo_tabela = None
-            for tab in REGRAS_TABELAS.keys():
-                if arq.name.endswith(f"{tab}.html"):
-                    tipo_tabela = tab
-                    break
-            if tipo_tabela:
-                snapshot_nome = arq.stem.removesuffix(f"_{tipo_tabela}")
-                parquet_esperado = SILVER_DIR / tipo_tabela / f"{snapshot_nome}.parquet"
-                if parquet_esperado.exists():
-                    ignorados += 1
-                    continue
-
-        resultado = processar_arquivo_html(arq)
+    for arq in arquivos_example:
+        resultado = processar_arquivo_example(arq)
         if resultado:
             processados += 1
 
-    logger.info(
-        "Processamento concluído: %d arquivos gerados/atualizados, %d já existentes ignorados.",
-        processados,
-        ignorados,
-    )
+    logger.info("Processamento concluído: %d arquivos de exemplo gerados na camada Silver.", processados)
 
 
-# ==============================================================================
-# 6. BLOCO PRINCIPAL PARA EXECUÇÃO DIRETA OU VIA AIRFLOW
-# ==============================================================================
 if __name__ == "__main__":
-    # Processa apenas os arquivos pendentes da pasta landing_raw
-    processar_todos_arquivos(apenas_pendentes=True)
+    processar_todos_examples()
+

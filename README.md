@@ -1,5 +1,6 @@
 #  Marítimo Data Pipeline
 
+> 🚧**Hiato , voltamos dia 10.09.2026** 🚧
 > 🚧🚧🚧 **Projeto em construção**🚧🚧🚧
 
 Pipeline de dados desenvolvido para coletar, transformar e organizar informações operacionais de um porto, com foco em **manobras previstas, navios atracados, navios fundeados e operações realizadas**.
@@ -76,6 +77,7 @@ Com a evolução do projeto, os dados poderão ser utilizados para analisar:
 
 ## 🚧 Próximos passos
 
+* [X] criar o catalogo dos dados
 * [ ] Refatorar os 5 scripts atuais de transformação em uma estrutura única, utilizando funções e módulos reutilizáveis.
 * [ ] Criar o `process.py`, responsável por identificar quais dados já foram processados na camada Silver e quais ainda precisam ser processados.
 * [ ] Implementar a orquestração do pipeline utilizando Apache Airflow.

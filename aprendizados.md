@@ -71,3 +71,22 @@ A justificativa para essa escolha passa pelo objetivo pedagógico do projeto: pr
 
 ### Aprendizado
 Nem toda decisão técnica precisa ser ditada estritamente pela máxima performance ou eficiência computacional. Em projetos de estudo e portfólio, ponderar objetivos de aprendizado pessoal torna perfeitamente válida a escolha de uma ferramenta mais robusta ou complexa.
+
+## 4. Adoção do Catálogo de Dados em Markdown (`.md`)
+
+Adoção do arquivo `catalogo_de_dados.md` no repositório para documentação de tabelas e colunas, em vez da implantação de uma ferramenta dedicada de Catálogo de Dados (ex: DataHub, OpenMetadata).
+
+### Problema
+Ferramentas dedicadas de catálogo de dados exigem infraestrutura própria (servidores, bancos de dados, conectores) e pipelines complexos de sincronização. Para a fase atual do projeto, adicionar essa camada de tecnologia traria um esforço operacional de gerenciamento (gerenciamento de infraestrutura) desproporcional ao ganho real gerado.
+
+Além disso, manter a documentação em sistemas externos ao repositório costuma gerar descasamento entre o código de transformação e a documentação dos dados.
+
+### Aprendizado
+
+Adotar o **Data Documentation as Code** via arquivo Markdown (`.md`) dentro do próprio repositório atende às necessidades do projeto com simplicidade e eficiência:
+
+* **Centralização no Git:** A documentação evolui junto com o código, passa por *code review* nos Pull Requests e mantém histórico de alterações no versionamento.
+* **Proximidade do Desenvolvedor:** A documentação fica no mesmo ambiente onde o código SQL/Python é criado, reduzindo a atrito de atualização.
+* **Zero Overhead de Infraestrutura:** Elimina custos e complexidades operacionais com servidores ou licenças de software nesta etapa.
+
+A migração para um catálogo de dados visual/dedicado será reavaliada no futuro apenas quando o número de modelos crescer significativamente ou quando houver demanda de consumo por áreas de negócio fora do ambiente do repositório.

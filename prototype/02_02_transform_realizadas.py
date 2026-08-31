@@ -62,7 +62,7 @@ df = tabelas[0]
 col = df.columns
 print("df colunas ="f'{col}')
 
-#%%        ####    CRIA COLUNAS NOVAS    ####
+#       ####    CRIA COLUNAS NOVAS    ####
 
 df["data_processamento"] = datetime.now()
 df["arquivo_origem"] = arquivo.name
