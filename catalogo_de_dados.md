@@ -90,7 +90,8 @@ Este documento descreve o catálogo de dados da **Camada Silver** do pipeline ma
 | `berco` | `string` | `STRING` | Não | Berço de atracação | `"jbs 1"`, `"teporti"` |
 | `bordo` | `string` | `STRING` | Sim | Lado atracado | `"bb"`, `"be"` |
 | `navio` | `string` | `STRING` | Não | Nome do navio atracado | `"maersk pangani"` |
-| `rota` | `string` | `STRING` | Sim | Rota de navegação | `"bacia 1"` |
+| 
+
 | `data_hora_atracagem` | `datetime64[us]` | `TIMESTAMP` | Sim | Data e hora em que o navio atracou | `2026-08-27 17:12:00` |
 | `situacao` | `string` | `STRING` | Não | Situação operacional do navio | `"atracado"` |
 | `data_processamento` | `datetime64[us]` | `TIMESTAMP` | Não | Timestamp de ingestão | `2026-08-27 22:51:35` |
