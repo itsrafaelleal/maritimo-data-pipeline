@@ -18,7 +18,11 @@ __pycache__/
 #parquet
 *.parquet
 silver/**/*.parquet
+gold/**/*.parquet
+gold/*.parquet
 !silver/**/*_example.parquet
+!gold/**/*_example.parquet
+!gold/*_example.parquet
 !*_example.parquet
 
 # Logs
