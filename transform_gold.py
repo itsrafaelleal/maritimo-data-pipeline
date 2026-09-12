@@ -1,4 +1,12 @@
 #%%
+"""
+================================================================================
+PIPELINE DE TRANSFORMAÇÃO ANALÍTICA - CAMADA GOLD
+Projeto: Marítimo Data Pipeline
+Descrição: Consolida e modela os dados da Camada Silver em um Star Schema
+           (Fatos e Dimensões) otimizado para consumo no Qlik / Power BI.
+================================================================================
+"""
 
 import logging
 from datetime import datetime
@@ -8,9 +16,9 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-
+# ==============================================================================
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
-
+# ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent
 SILVER_DIR = BASE_DIR / "silver"
 GOLD_DIR = BASE_DIR / "gold"
@@ -22,9 +30,9 @@ logging.basicConfig(
 logger = logging.getLogger("TransformGold")
 
 
-
-#  FUNÇÕES AUXILIARES DE LEITURA DA CAMADA SILVER
-
+# ==============================================================================
+# 2. FUNÇÕES AUXILIARES DE LEITURA DA CAMADA SILVER
+# ==============================================================================
 def carregar_tabela_silver(nome_tabela: str) -> pd.DataFrame:
     """
     Carrega e unifica todos os arquivos Parquet de uma tabela da Camada Silver,
@@ -51,9 +59,9 @@ def carregar_tabela_silver(nome_tabela: str) -> pd.DataFrame:
     return df_consolidado
 
 
-
+# ==============================================================================
 # 3. CONSTRUÇÃO DAS TABELAS DIMENSÃO (CONFORMES)
-
+# ==============================================================================
 def construir_dim_navios(dfs_silver: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     Cria a dimensão 'dim_navios':
@@ -91,21 +99,31 @@ def construir_dim_navios(dfs_silver: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     dim_navios = df_todos_navios.groupby("navio").first().reset_index()
 
     # Formatação e Tipagem das Colunas
-    dim_navios["id_navio"] = dim_navios["navio"]
-    dim_navios["nome_navio"] = dim_navios["navio"].str.upper()
+    dim_navios["id_navio"] = dim_navios["navio"].astype("string")
+    dim_navios["nome_navio"] = dim_navios["navio"].str.upper().astype("string")
 
-    colunas_finais = ["id_navio", "nome_navio"]
     if "loa" in dim_navios.columns:
-        dim_navios["loa_metros"] = dim_navios["loa"]
-        colunas_finais.append("loa_metros")
+        dim_navios["loa_metros"] = pd.to_numeric(
+            dim_navios["loa"].astype(str).str.replace(",", "."),
+            errors="coerce"
+        ).astype("Int64")
+    else:
+        dim_navios["loa_metros"] = pd.Series(dtype="Int64")
+
     if "boca" in dim_navios.columns:
-        dim_navios["boca_metros"] = dim_navios["boca"]
-        colunas_finais.append("boca_metros")
+        dim_navios["boca_metros"] = pd.to_numeric(
+            dim_navios["boca"].astype(str).str.replace(",", "."),
+            errors="coerce"
+        ).astype("Int64")
+    else:
+        dim_navios["boca_metros"] = pd.Series(dtype="Int64")
 
     dim_navios["data_processamento"] = datetime.now()
-    colunas_finais.append("data_processamento")
 
+    # Seleciona apenas as colunas finais
+    colunas_finais = ["id_navio", "nome_navio", "loa_metros", "boca_metros", "data_processamento"]
     dim_navios = dim_navios[colunas_finais]
+
     logger.info("dim_navios concluída com %d navios únicos cadastrados.", len(dim_navios))
     return dim_navios
 
@@ -125,7 +143,8 @@ def construir_dim_bercos(dfs_silver: Dict[str, pd.DataFrame]) -> pd.DataFrame:
             bercos_set.update(bercos_validos)
 
     df_bercos = pd.DataFrame({"id_berco": sorted(list(bercos_set))})
-    df_bercos["nome_berco"] = df_bercos["id_berco"].str.upper()
+    df_bercos["id_berco"] = df_bercos["id_berco"].astype("string")
+    df_bercos["nome_berco"] = df_bercos["id_berco"].str.upper().astype("string")
 
     # Mapeamento do Terminal Portuário responsável pelo berço
     def identificar_terminal(berco_str: str) -> str:
@@ -149,14 +168,14 @@ def construir_dim_bercos(dfs_silver: Dict[str, pd.DataFrame]) -> pd.DataFrame:
             return "TPT"
         return "Outros / Cais Público"
 
-    df_bercos["terminal_operador"] = df_bercos["id_berco"].apply(identificar_terminal)
+    df_bercos["terminal_operador"] = df_bercos["id_berco"].apply(identificar_terminal).astype("string")
     df_bercos["data_processamento"] = datetime.now()
 
     logger.info("dim_bercos concluída com %d berços mapeados.", len(df_bercos))
     return df_bercos
 
 
-def construir_dim_calendario(data_inicio: str = "2026-01-01", data_fim: str = "2026-12-31") -> pd.DataFrame:
+def construir_dim_calendario(data_inicio: str = "2026-08-01", data_fim: str = "2026-09-30") -> pd.DataFrame:
     """
     Gera a dimensão de tempo 'dim_calendario' contínua para facilitar análises temporais no Qlik.
     """
@@ -183,17 +202,17 @@ def construir_dim_calendario(data_inicio: str = "2026-01-01", data_fim: str = "2
         4: "Quinta-feira", 5: "Sexta-feira", 6: "Sábado", 7: "Domingo"
     }
     
-    df_cal["mes_nome"] = df_cal["mes"].map(meses_pt)
-    df_cal["dia_semana_nome"] = df_cal["dia_semana"].map(dias_semana_pt)
+    df_cal["mes_nome"] = df_cal["mes"].map(meses_pt).astype("string")
+    df_cal["dia_semana_nome"] = df_cal["dia_semana"].map(dias_semana_pt).astype("string")
     df_cal["flag_fim_de_semana"] = df_cal["dia_semana"].isin([6, 7])
 
     logger.info("dim_calendario concluída com %d dias gerados.", len(df_cal))
     return df_cal
 
 
-
+# ==============================================================================
 # 4. CONSTRUÇÃO DAS TABELAS FATO (MÉTRICAS ANALÍTICAS)
-
+# ==============================================================================
 def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFrame) -> pd.DataFrame:
     """
     Cria a tabela fato principal 'fct_manobras_previsto_vs_realizado':
@@ -262,17 +281,18 @@ def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFra
 
     # --- 4. Consolidação de Atributos e Métricas ---
     fato["data_operacao"] = fato["data"]
-    fato["id_navio"] = fato["navio"]
-    fato["id_berco"] = fato["berco"]
-    fato["tipo_manobra"] = fato["manobra"]
+    fato["id_navio"] = fato["navio"].astype("string")
+    fato["id_berco"] = fato["berco"].astype("string")
+    fato["tipo_manobra"] = fato["manobra"].astype("string")
 
     # Bordo e Rota consolidados
     fato["bordo"] = fato.get("bordo_realizado", pd.Series(dtype="string")).combine_first(
         fato.get("bordo_previsto", pd.Series(dtype="string"))
-    )
+    ).astype("string")
+    
     fato["rota"] = fato.get("rota_realizada", pd.Series(dtype="string")).combine_first(
         fato.get("rota_previsto", pd.Series(dtype="string"))
-    )
+    ).astype("string")
 
     # Chave Primária da Operação
     fato["id_operacao"] = (
@@ -280,7 +300,7 @@ def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFra
         fato["id_navio"].astype(str) + "_" +
         fato["tipo_manobra"].astype(str) + "_" +
         fato["id_berco"].astype(str)
-    )
+    ).astype("string")
 
     # Contagem de Rebocadores Utilizados
     def contar_rebocadores(val: object) -> int:
@@ -289,9 +309,11 @@ def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFra
         return len(str(val).split("/"))
 
     if "rebocadores" in fato.columns:
-        fato["qtd_rebocadores"] = fato["rebocadores"].apply(contar_rebocadores)
+        fato["qtd_rebocadores"] = fato["rebocadores"].apply(contar_rebocadores).astype("Int64")
+        fato["rebocadores"] = fato["rebocadores"].astype("string")
     else:
-        fato["qtd_rebocadores"] = 0
+        fato["qtd_rebocadores"] = pd.Series(0, index=fato.index, dtype="Int64")
+        fato["rebocadores"] = pd.Series(dtype="string")
 
     # Cálculo do Atraso em Minutos: (Realizado - Previsto)
     if "data_hora_manobra_realizada" in fato.columns and "data_hora_manobra_prevista" in fato.columns:
@@ -320,7 +342,7 @@ def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFra
             return "Adiantado"
         return "Indefinido"
 
-    fato["status_pontualidade"] = fato.apply(classificar_pontualidade, axis=1)
+    fato["status_pontualidade"] = fato.apply(classificar_pontualidade, axis=1).astype("string")
 
     # Horas de Antecedência da Previsão
     if "data_hora_manobra_realizada" in fato.columns and "timestamp_ultima_previsao" in fato.columns:
@@ -330,6 +352,10 @@ def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFra
         fato["horas_antecedencia_previsao"] = np.nan
 
     fato["data_processamento"] = datetime.now()
+
+    for col_str in ["status_previsao", "situacao_navio_previsao", "status_realizado"]:
+        if col_str in fato.columns:
+            fato[col_str] = fato[col_str].astype("string")
 
     # Seleção e Ordenação das Colunas Analíticas
     colunas_ordenadas = [
@@ -412,13 +438,20 @@ def construir_fct_tempo_fila_barra(df_fundeados: pd.DataFrame, df_atracados: pd.
         })
 
     fct_espera = pd.DataFrame(registros_espera)
+
+    for col in ["id_espera", "id_navio", "status_espera", "id_berco_atracado", "posicao_barra"]:
+        if col in fct_espera.columns:
+            fct_espera[col] = fct_espera[col].astype("string")
+    if "data_fundeio" in fct_espera.columns:
+        fct_espera["data_fundeio"] = pd.to_datetime(fct_espera["data_fundeio"])
+
     logger.info("fct_tempo_fila_barra concluída com %d ciclos de espera analisados.", len(fct_espera))
     return fct_espera
 
 
-
+# ==============================================================================
 # 5. EXECUÇÃO DO PIPELINE GOLD
-
+# ==============================================================================
 def executar_pipeline_gold() -> None:
     """
     Executa o fluxo completo de transformação da Camada Silver para a Camada Gold.
@@ -497,4 +530,3 @@ def executar_pipeline_gold() -> None:
 
 if __name__ == "__main__":
     executar_pipeline_gold()
-
