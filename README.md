@@ -23,7 +23,7 @@ O projeto avançou significativamente nas camadas de ingestão, transformação 
 
 ## A Importância do Catálogo de Dados
 
-O arquivo [catalogo_de_dados.md](catalogo_de_dados.md) é o coração da governança deste projeto. Ele atua como um **contrato de dados (*Data Contract*)** entre a Engenharia de Dados e a camada de Business Intelligence (BI):
+O arquivo [catalogo_de_dados.md](catalogo_de_dados.md) é o coração da governança deste projeto. Ele atua como um **contrato de dados** entre a Engenharia de Dados e a camada de Business Intelligence (BI):
 
 1. **Dicionário Técnico Completo:** Descreve cada coluna, tipo no Pandas, tipo no Parquet, regras de nulos e descrições de negócio para as camadas Silver e Gold.
 2. **Memória de Cálculo dos Indicadores:** Formaliza a lógica de métricas críticas (como a *Taxa de Pontualidade*, *Tempo Médio de Espera na Barra* e *Atraso Efetivo*), garantindo que desenvolvedores e analistas de BI falem a mesma língua.
@@ -76,7 +76,7 @@ Fonte de Dados Portuária (Web)
 * **Coleta:** Selenium WebDriver
 * **Processamento & Engenharia:** pandas, PyArrow, NumPy
 * **Armazenamento:** Apache Parquet (colunar)
-* **Modelagem:** Star Schema (Kimball)
+* **Modelagem:** Star Schema
 * **Governança & Documentação:** Data Documentation as Code (Markdown / Mermaid)
 * **Consumo / BI:** Qlik Sense / Qlik Cloud
 * **Orquestração:** Apache Airflow *(próxima etapa)*
