@@ -72,6 +72,8 @@ A justificativa para essa escolha passa pelo objetivo pedagógico do projeto: pr
 ### Aprendizado
 Nem toda decisão técnica precisa ser ditada estritamente pela máxima performance ou eficiência computacional. Em projetos de estudo e portfólio, ponderar objetivos de aprendizado pessoal torna perfeitamente válida a escolha de uma ferramenta mais robusta ou complexa.
 
+---
+
 ## 4. Adoção do Catálogo de Dados em Markdown (`.md`)
 
 Adoção do arquivo `catalogo_de_dados.md` no repositório para documentação de tabelas e colunas, em vez da implantação de uma ferramenta dedicada de Catálogo de Dados (ex: DataHub, OpenMetadata).
@@ -90,3 +92,27 @@ Adotar o **Data Documentation as Code** via arquivo Markdown (`.md`) dentro do p
 * **Zero Overhead de Infraestrutura:** Elimina custos e complexidades operacionais com servidores ou licenças de software nesta etapa.
 
 A migração para um catálogo de dados visual/dedicado será reavaliada no futuro apenas quando o número de modelos crescer significativamente ou quando houver demanda de consumo por áreas de negócio fora do ambiente do repositório.
+
+---
+
+## 5. Diagramas como Código com Mermaid e Extensões do VS Code (`mermaid.live`)
+
+### Contexto
+Para documentar a modelagem dimensional (Star Schema), o fluxo de dados entre camadas e os relacionamentos de chaves (PK / FK), era necessário criar diagramas claros, profissionais e fáceis de manter.
+
+### Problema das Ferramentas Tradicionais de Desenho
+O uso de ferramentas visuais tradicionais (como Visio, Canva ou Draw.io) costuma gerar arquivos de imagem estáticos (`.png`, `.jpg`):
+* Imagens binárias não mostram histórico de alterações em diffs do Git.
+* Qualquer mudança de coluna ou chave exige redesenhar a imagem inteira manualmente e exportar outro arquivo.
+* A documentação fica rapidamente desatualizada (*documentation drift*).
+
+### Decisão e Aprendizado: Adoção do Mermaid ("Diagrams as Code")
+Optou-se por utilizar o **Mermaid**, uma linguagem declarativa que permite escrever diagramas diretamente em blocos de texto no Markdown:
+
+1. **Versionável no Git:** O diagrama é texto puro. Quando uma tabela ganha uma nova coluna, basta adicionar uma linha no Markdown e o Git rastreia o diff normalmente.
+2. **Renderização Nativa:** Plataformas como GitHub, GitLab e Notion interpretam e desenham o gráfico interativo automaticamente.
+3. **Uso no VS Code e Prototipagem:**
+   * **Extensões de Visualização do VS Code:** Permitem pré-visualizar diagramas Mermaid em tempo real diretamente ao lado do código.
+   * **Ferramenta `mermaid.live`:** Editor web oficial do Mermaid, excelente para testar, validar a sintaxe e prototipar fluxogramas (Flowcharts), diagramas Entidade-Relacionamento (ERD) e linhas do tempo antes de colar no arquivo `.md` do projeto.
+
+Essa abordagem consolida a prática de **Documentation as Code**, mantendo esquemas de banco e arquiteturas de dados sempre sincronizados com a evolução do código.

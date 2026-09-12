@@ -1,90 +1,97 @@
-#  Marítimo Data Pipeline
+# Marítimo Data Pipeline
 
-> 🚧**Hiato , voltamos dia 10.09.2026** 🚧
-> 🚧🚧🚧 **Projeto em construção**🚧🚧🚧
+Pipeline de dados desenvolvido para coletar, transformar, modelar e organizar informações operacionais de um porto, com foco em **manobras previstas, manobras realizadas, navios atracados, navios fundeados e chegadas previstas**.
 
-Pipeline de dados desenvolvido para coletar, transformar e organizar informações operacionais de um porto, com foco em **manobras previstas, navios atracados, navios fundeados e operações realizadas**.
+O pipeline realiza a coleta de dados por meio de **Web Scraping com Selenium**, processa e normaliza as informações na camada **Silver** com Python e pandas gerando arquivos **Apache Parquet**, e estrutura a camada **Gold** em **Modelagem Dimensional (Star Schema)** pronta para consumo em dashboards analíticos no **Qlik (Qlik Sense / Qlik Cloud)**.
 
-O pipeline realiza a coleta de dados por meio de **Web Scraping com Selenium**, processa e normaliza as informações em Python e gera **snapshots a cada 4 horas**, permitindo análises de **previsão vs. realizado** ao longo do tempo.
+> **Documentação e Aprendizados:**
+> * [catalogo_de_dados.md](catalogo_de_dados.md) — **Catálogo oficial e dicionário de dados** com esquemas, tipos, métricas de negócio e mapa completo do dashboard.
+> * [aprendizados.md](aprendizados.md) — Documento com decisões técnicas, desafios arquiteturais e boas práticas de engenharia de dados adotadas no projeto.
 
-> **📚 Leia :** [aprendizados.md](aprendizados.md) — Documento com todos os aprendizados, desafios e decisões técnicas do projeto. **Essencial para entender a evolução do pipeline.**
+---
 
-##  Arquitetura
+## Status Atual do Projeto
 
-Atualmente, o projeto trabalha com arquitetura medalhão:
+O projeto avançou significativamente nas camadas de ingestão, transformação e modelagem analítica:
 
-### 🟤 Landing Raw (`landing_raw/`)
-Responsável pelo armazenamento dos dados brutos coletados durante o Web Scraping.
+* **Landing Raw:** Scraping automatizado coletando snapshots periódicos em HTML.
+* **Silver:** Pipeline unificado e modular ([transform_silver.py](transform_silver.py)) tratando os dados brutos, tipando datas/horas padronizadas (`datetime64[us]`) e gerando arquivos Parquet.
+* **Gold:** Modelagem dimensional em Star Schema ([transform_gold.py](transform_gold.py)) concluída, gerando tabelas Fato de pontualidade (`fct_manobras_previsto_vs_realizado`), tempo de espera na barra (`fct_tempo_fila_barra`) e Dimensões (`dim_navios`, `dim_bercos`, `dim_calendario`).
+* **Governança & BI:** Catálogo de dados detalhado e planejamento funcional do dashboard gerencial no Qlik com 5 abas operacionais.
 
-* Preservação do dado original;
-* Snapshots periódicos;
-* Base para reprocessamento e auditoria.
+---
 
-### ⚪ Silver
+## A Importância do Catálogo de Dados
 
-Responsável pelo tratamento e normalização dos dados.
+O arquivo [catalogo_de_dados.md](catalogo_de_dados.md) é o coração da governança deste projeto. Ele atua como um **contrato de dados (*Data Contract*)** entre a Engenharia de Dados e a camada de Business Intelligence (BI):
 
-* Limpeza e padronização;
-* Transformações utilizando Python e pandas;
-* Conversão para Parquet;
-* Estruturação dos dados para consumo analítico.
+1. **Dicionário Técnico Completo:** Descreve cada coluna, tipo no Pandas, tipo no Parquet, regras de nulos e descrições de negócio para as camadas Silver e Gold.
+2. **Memória de Cálculo dos Indicadores:** Formaliza a lógica de métricas críticas (como a *Taxa de Pontualidade*, *Tempo Médio de Espera na Barra* e *Atraso Efetivo*), garantindo que desenvolvedores e analistas de BI falem a mesma língua.
+3. **Diagramas ERD Vivos:** Documenta visualmente o Star Schema usando diagramas como código (Mermaid), rastreando as chaves primárias (PK) e estrangeiras (FK).
+4. **Mapa do Dashboard:** Especifica detalhadamente as 5 abas do painel, filtros e a grade de auditoria com 15 colunas para conferência de dados.
 
-### 🟡 Gold — em desenvolvimento
+---
 
-A próxima etapa será criar uma camada analítica com métricas e indicadores, permitindo comparar o **planejado vs. realizado** e sobre a operação portuária.
-
-## 🛠️ Tecnologias
-
-* **Python**
-* **Selenium**
-* **pandas**
-* **Parquet**
-* **Apache Airflow**
-* **Qlik**
-* **Git / GitHub**
-* **VS Code**
-* **Cloud Computing**
-
-## 🔄 Fluxo do Pipeline
+## Arquitetura Medalhão
 
 ```text
-Fonte de dados
-      ↓
-Web Scraping — Selenium
-      ↓
-Landing — HTML bruto
-      ↓
-Transformação — Python / pandas
-      ↓
-Silver — Parquet normalizado
-      ↓
-Gold — Métricas e modelos analíticos
-      ↓
-Dashboard — Qlik
+Fonte de Dados Portuária (Web)
+            ↓
+   Web Scraping — Selenium
+            ↓
+  Landing Raw — HTML Bruto (Snapshots a cada 4h)
+            ↓
+  Transformação Silver — Python / pandas / PyArrow
+            ↓
+  Silver — Parquet Normalizado e Tipado
+            ↓
+  Modelagem Gold — transform_gold.py (Star Schema)
+            ↓
+  Gold — Parquets Dimensionais (Fatos e Dimensões)
+            ↓
+  Dashboard Executivo & Operacional — Qlik (Qlik Sense / Cloud)
 ```
 
-## 📊 Análises previstas
+### 1. Landing Raw (`landing_raw/`)
+* Armazenamento dos dados brutos coletados via Selenium;
+* Preservação do dado original para auditoria e histórico de snapshots;
+* Base para reprocessamento completo do pipeline.
 
-Com a evolução do projeto, os dados poderão ser utilizados para analisar:
+### 2. Camada Silver (`silver/`)
+* Normalização e limpeza de texto (remoção de acentos, padronização snake_case);
+* Extração e unificação de datas/horas operacionais (`data_hora_*`);
+* Conversão colunar para Apache Parquet de alta performance;
+* Tipagem defensiva contra dados nulos e horários suspensos (`TBC`).
 
-* Manobras previstas vs. realizadas;
-* Confiabilidade das previsões;
-* Atrasos e antecipações;
-* Volume de operações ao longo do tempo;
-* Movimentação de navios;
-* Indicadores operacionais;
-* Tendências e padrões das operações portuárias.
+### 3. Camada Gold (`gold/`)
+* Consolidação e deduplicação de múltiplos snapshots em um Star Schema limpo;
+* **Dimensões:** `dim_navios`, `dim_bercos` (com operador portuário) e `dim_calendario`;
+* **Fatos:** `fct_manobras_previsto_vs_realizado` (cálculo de atrasos em minutos e SLA) e `fct_tempo_fila_barra` (tempo de espera em fundeio).
 
-## 🚧 Próximos passos
+---
 
-* [X] criar o catalogo dos dados
-* [ ] Refatorar os 5 scripts atuais de transformação em uma estrutura única, utilizando funções e módulos reutilizáveis.
-* [ ] Criar o `process.py`, responsável por identificar quais dados já foram processados na camada Silver e quais ainda precisam ser processados.
-* [ ] Implementar a orquestração do pipeline utilizando Apache Airflow.
-* [ ] Estruturar a camada Gold com métricas analíticas.
-* [ ] Criar métricas de confiabilidade entre previsão e realizado.
-* [ ] Estudar e definir a melhor estratégia para visualização dos dados utilizando Qlik.
-* [ ] Desenvolver o dashboard de acompanhamento das operações portuárias.
+## Tecnologias Utilizadas
 
-> 🚧 **Projeto em desenvolvimento.**
-> Novas etapas, métricas e visualizações serão adicionadas conforme a evolução do pipeline.
+* **Linguagem:** Python 3.12
+* **Coleta:** Selenium WebDriver
+* **Processamento & Engenharia:** pandas, PyArrow, NumPy
+* **Armazenamento:** Apache Parquet (colunar)
+* **Modelagem:** Star Schema (Kimball)
+* **Governança & Documentação:** Data Documentation as Code (Markdown / Mermaid)
+* **Consumo / BI:** Qlik Sense / Qlik Cloud
+* **Orquestração:** Apache Airflow *(próxima etapa)*
+* **Controle de Versão:** Git & GitHub
+
+---
+
+## Próximos Passos
+
+* [x] Criar o catálogo e dicionário de dados oficial ([catalogo_de_dados.md](catalogo_de_dados.md)).
+* [x] Refatorar os scripts de transformação da Silver em um módulo único e modular ([transform_silver.py](transform_silver.py)).
+* [x] Criar gerador de amostras controladas ([prototype/04_transform_examples.py](prototype/04_transform_examples.py)).
+* [x] Estruturar a camada Gold em Star Schema com métricas analíticas ([transform_gold.py](transform_gold.py)).
+* [x] Criar métricas de pontualidade, cálculo de atrasos e tempo de fila na barra.
+* [x] Planejar a arquitetura visual e mapa de dados do Dashboard (5 abas operacionais).
+* [ ] Implementar a orquestração do ciclo completo via Apache Airflow (DAG: Scrape $\rightarrow$ Silver $\rightarrow$ Gold $\rightarrow$ Qlik Reload).
+* [ ] Conectar o Qlik Sense / Qlik Cloud aos arquivos Parquet da Camada Gold.
+* [ ] Desenvolver os visuais, gráficos e KPIs no Qlik conforme o mapa do dashboard.
