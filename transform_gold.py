@@ -1,12 +1,4 @@
 #%%
-"""
-================================================================================
-PIPELINE DE TRANSFORMAÇÃO ANALÍTICA - CAMADA GOLD
-Projeto: Marítimo Data Pipeline
-Descrição: Consolida e modela os dados da Camada Silver em um Star Schema
-           (Fatos e Dimensões) otimizado para consumo no Qlik / Power BI.
-================================================================================
-"""
 
 import logging
 from datetime import datetime
@@ -16,9 +8,9 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-# ==============================================================================
+
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
-# ==============================================================================
+
 BASE_DIR = Path(__file__).resolve().parent
 SILVER_DIR = BASE_DIR / "silver"
 GOLD_DIR = BASE_DIR / "gold"
@@ -59,9 +51,9 @@ def carregar_tabela_silver(nome_tabela: str) -> pd.DataFrame:
     return df_consolidado
 
 
-# ==============================================================================
+
 # 3. CONSTRUÇÃO DAS TABELAS DIMENSÃO (CONFORMES)
-# ==============================================================================
+
 def construir_dim_navios(dfs_silver: Dict[str, pd.DataFrame]) -> pd.DataFrame:
     """
     Cria a dimensão 'dim_navios':
@@ -199,9 +191,9 @@ def construir_dim_calendario(data_inicio: str = "2026-01-01", data_fim: str = "2
     return df_cal
 
 
-# ==============================================================================
+
 # 4. CONSTRUÇÃO DAS TABELAS FATO (MÉTRICAS ANALÍTICAS)
-# ==============================================================================
+
 def construir_fct_manobras(df_previstas: pd.DataFrame, df_realizadas: pd.DataFrame) -> pd.DataFrame:
     """
     Cria a tabela fato principal 'fct_manobras_previsto_vs_realizado':
@@ -424,9 +416,9 @@ def construir_fct_tempo_fila_barra(df_fundeados: pd.DataFrame, df_atracados: pd.
     return fct_espera
 
 
-# ==============================================================================
+
 # 5. EXECUÇÃO DO PIPELINE GOLD
-# ==============================================================================
+
 def executar_pipeline_gold() -> None:
     """
     Executa o fluxo completo de transformação da Camada Silver para a Camada Gold.
