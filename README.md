@@ -79,7 +79,7 @@ Fonte de Dados Portuária (Web)
 * **Modelagem:** Star Schema
 * **Governança & Documentação:** Data Documentation as Code (Markdown / Mermaid)
 * **Consumo / BI:** Qlik Sense / Qlik Cloud
-* **Orquestração:** Apache Airflow *(próxima etapa)*
+* **Orquestração:** Apache Airflow (DAG `maritimo_transform`: silver → gold) — ver [orquestracao/](orquestracao/)
 * **Controle de Versão:** Git & GitHub
 
 ---
@@ -92,6 +92,6 @@ Fonte de Dados Portuária (Web)
 * [x] Estruturar a camada Gold em Star Schema com métricas analíticas ([transform_gold.py](transform_gold.py)).
 * [x] Criar métricas de pontualidade, cálculo de atrasos e tempo de fila na barra.
 * [x] Planejar a arquitetura visual e mapa de dados do Dashboard (5 abas operacionais).
-* [ ] Implementar a orquestração do ciclo completo via Apache Airflow (DAG: Scrape $\rightarrow$ Silver $\rightarrow$ Gold $\rightarrow$ Qlik Reload).
+* [x] Implementar a orquestração das transformações via Apache Airflow (DAG: Silver $\rightarrow$ Gold) — ver [orquestracao/](orquestracao/). *O scraper permanece no cron do host por depender de Selenium/site externo; o cron dispara a DAG de forma desacoplada.*
 * [ ] Conectar o Qlik Sense / Qlik Cloud aos arquivos Parquet da Camada Gold.
 * [ ] Desenvolver os visuais, gráficos e KPIs no Qlik conforme o mapa do dashboard.

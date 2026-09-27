@@ -1,0 +1,30 @@
+# =============================================================================
+# crontab.example — agendamento do disparo da DAG de transformação
+#
+# Como usar:
+#   1. Torne o script executável:
+#        chmod +x scriptcron/trigger_airflow_transform.sh
+#   2. Edite seu crontab:
+#        crontab -e
+#   3. Adicione uma linha baseada no exemplo abaixo, ajustando o caminho
+#      ABSOLUTO do script (o cron NÃO herda o diretório nem as variáveis do
+#      seu shell interativo).
+#
+# Dica: teste o script manualmente antes de agendar:
+#        ./scriptcron/trigger_airflow_transform.sh
+# =============================================================================
+
+# Exemplo: dispara a transformação a cada 4 horas, aos 10 minutos da hora
+# (ex.: 00:10, 04:10, 08:10, ...). O deslocamento de 10 min dá uma folga para
+# a coleta (scraper) terminar antes de a transformação rodar.
+#
+# ┌ minuto (10)
+# │  ┌ hora (a cada 4h)
+# │  │    ┌ dia do mês (qualquer)
+# │  │    │ ┌ mês (qualquer)
+# │  │    │ │ ┌ dia da semana (qualquer)
+# │  │    │ │ │
+  10 */4  * * *  /CAMINHO/ABSOLUTO/PARA/orquestracao/scriptcron/trigger_airflow_transform.sh
+
+# Opcional: sobrescrever as variáveis de ambiente na própria linha do cron.
+# 10 */4 * * * AIRFLOW_CONTAINER=airflow-scheduler AIRFLOW_DAG_ID=maritimo_transform /CAMINHO/ABSOLUTO/.../trigger_airflow_transform.sh
