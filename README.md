@@ -283,7 +283,7 @@ Detalhadas em [aprendizados.md](aprendizados.md). Em resumo:
 
 ## Próximos Passos
 
-* [ ]  Conectar o Qlik aos Parquets da Gold e publicar o dashboard.
+* [ ]  Usando o Qlik publicar o dashboard.
 * [ ]  Testes automatizados para as funções de transformação.
 * [ ]  Monitoramento/alertas de falha na coleta.
 * [ ]  Refatorar o scraping com `requests`/`BeautifulSoup` (mais leve para o HTML estático).
