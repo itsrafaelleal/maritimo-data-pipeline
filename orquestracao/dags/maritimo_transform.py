@@ -50,7 +50,7 @@ def maritimo_transform():
 
     @task
     def transform_silver() -> dict:
-        """landing_raw (HTML) -> silver (Parquet). Idempotente: só processa
+        """landing_raw (HTML) -> silver (Parquet). Só processa
         os HTML que ainda não têm o Parquet correspondente."""
         import sys
         from pathlib import Path

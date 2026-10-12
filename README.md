@@ -1,196 +1,290 @@
-# Marítimo Data Pipeline
+# Marítimo Data Pipeline — Operações Portuárias (Selenium + Pandas + Airflow + Qlik)
 
-Pipeline de dados desenvolvido para coletar, transformar, modelar e organizar informações operacionais de um porto, com foco em **manobras previstas, manobras realizadas, navios atracados, navios fundeados e chegadas previstas**.
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Selenium](https://img.shields.io/badge/Selenium-WebDriver-43B02A?logo=selenium&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-DataFrame-150458?logo=pandas&logoColor=white)
+![Apache Parquet](https://img.shields.io/badge/Apache%20Parquet-colunar-50ABF1?logo=apacheparquet&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-3.3.2-017CEE?logo=apacheairflow&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+![Qlik](https://img.shields.io/badge/Qlik-Sense%20%2F%20Cloud-009845?logo=qlik&logoColor=white)
 
-O pipeline realiza a coleta de dados por meio de **Web Scraping com Selenium**, processa e normaliza as informações na camada **Silver** com Python e pandas gerando arquivos **Apache Parquet**, e estrutura a camada **Gold** em **Modelagem Dimensional (Star Schema)**. A execução das transformações é **orquestrada pelo Apache Airflow** (rodando em Docker no homelab) e a camada Gold está pronta para consumo em dashboards analíticos no **Qlik (Qlik Sense / Qlik Cloud)** — última etapa pendente.
+Pipeline de dados de ponta a ponta que coleta, trata, modela e organiza informações operacionais de um porto — **manobras previstas, manobras realizadas, navios atracados, navios fundeados e chegadas previstas** — transformando páginas HTML voláteis em um **Star Schema** pronto para análise de pontualidade (SLA) e eficiência de barra.
 
-> **Documentação e Aprendizados:**
-> * [catalogo_de_dados.md](catalogo_de_dados.md) — **Catálogo oficial e dicionário de dados** com esquemas, tipos, métricas de negócio e mapa completo do dashboard.
-> * [aprendizados.md](aprendizados.md) — Documento com decisões técnicas, desafios arquiteturais e boas práticas de engenharia de dados adotadas no projeto.
+O pipeline faz **Web Scraping com Selenium**, normaliza os dados na camada **Silver** com Python/pandas (gerando **Apache Parquet**), estrutura a camada **Gold** em **Modelagem Dimensional (Star Schema)**, é **orquestrado pelo Apache Airflow** (Docker, no homelab) e alimenta um **dashboard gerencial no Qlik** com 5 abas operacionais.
+
+> **Documentação e aprendizados:**
+>
+> * [catalogo_de_dados.md](catalogo_de_dados.md) — **Catálogo oficial e dicionário de dados**: esquemas, tipos, métricas de negócio e o mapa completo do dashboard.
+> * [aprendizados.md](aprendizados.md) — decisões técnicas, desafios arquiteturais e boas práticas de engenharia de dados adotadas.
 > * [orquestracao/](orquestracao/) — DAGs do Airflow, script de disparo via cron e a documentação da camada de orquestração.
 
 ---
 
-## Status Atual do Projeto
+## Contexto do Projeto
 
-O projeto está com o pipeline de ponta a ponta **automatizado e orquestrado**. Falta apenas a camada de visualização (Qlik):
+**Problema:** os dados operacionais do porto só existem como **tabelas HTML em uma página web**, que são sobrescritas ao longo do dia. Isso traz três dificuldades:
 
-* **Landing Raw:** Scraping automatizado coletando snapshots periódicos em HTML.
-* **Silver:** Pipeline unificado e modular ([transform_silver.py](transform_silver.py)) tratando os dados brutos, tipando datas/horas padronizadas (`datetime64[us]`) e gerando arquivos Parquet.
-* **Gold:** Modelagem dimensional em Star Schema ([transform_gold.py](transform_gold.py)) concluída, gerando tabelas Fato de pontualidade (`fct_manobras_previsto_vs_realizado`), tempo de espera na barra (`fct_tempo_fila_barra`) e Dimensões (`dim_navios`, `dim_bercos`, `dim_calendario`).
-* **Orquestração:** ✅ **Em produção no homelab.** Apache Airflow 3.3.2 (LocalExecutor + Postgres) em Docker executando a DAG `maritimo_transform` (silver → gold). O agendamento fica no cron do host, que dispara a DAG de forma desacoplada — ver [orquestracao/](orquestracao/).
-* **Governança & BI:** Catálogo de dados detalhado e planejamento funcional do dashboard gerencial no Qlik com 5 abas operacionais.
-* **BI / Visualização:** ⏳ **Pendente.** Conectar o Qlik aos Parquets da Gold e construir os visuais.
+* **Sem histórico:** a página mostra só o estado atual; não dá para analisar atrasos, tendências ou comparar dias.
+* **Dado sujo e volátil:** texto com acentos, horários como `"16:45 atb"` ou `"TBC"`, campos nulos e múltiplos formatos de data.
+* **Previsto ≠ Realizado:** a mesma manobra aparece várias vezes com previsões diferentes ao longo do tempo, sem um registro consolidado do que de fato aconteceu.
 
----
+**Objetivo:** construir um pipeline que:
 
-## A Importância do Catálogo de Dados
+* Captura **snapshots periódicos** (a cada 4h) e preserva o dado bruto para auditoria.
+* Limpa, tipa e normaliza as 5 tabelas na camada **Silver** (Parquet).
+* Consolida tudo em um **Star Schema** na camada **Gold**, deduplicando snapshots e cruzando **previsto vs. realizado**.
+* Calcula métricas de negócio: **taxa de pontualidade**, **atraso em minutos**, **tempo de espera na barra**.
 
-O arquivo [catalogo_de_dados.md](catalogo_de_dados.md) é o coração da governança deste projeto. Ele atua como um **contrato de dados** entre a Engenharia de Dados e a camada de Business Intelligence (BI):
-
-1. **Dicionário Técnico Completo:** Descreve cada coluna, tipo no Pandas, tipo no Parquet, regras de nulos e descrições de negócio para as camadas Silver e Gold.
-2. **Memória de Cálculo dos Indicadores:** Formaliza a lógica de métricas críticas (como a *Taxa de Pontualidade*, *Tempo Médio de Espera na Barra* e *Atraso Efetivo*), garantindo que desenvolvedores e analistas de BI falem a mesma língua.
-3. **Diagramas ERD Vivos:** Documenta visualmente o Star Schema usando diagramas como código (Mermaid), rastreando as chaves primárias (PK) e estrangeiras (FK).
-4. **Mapa do Dashboard:** Especifica detalhadamente as 5 abas do painel, filtros e a grade de auditoria com 15 colunas para conferência de dados.
+**Resultado:** um modelo dimensional com **2 tabelas Fato e 3 Dimensões**, orquestrado e automatizado, pronto para consumo em BI.
 
 ---
 
 ## Arquitetura Medalhão
 
+A imagem abaixo resume o fluxo completo nas camadas **Raw → Silver → Gold → Dashboards**:
+
+![Arquitetura do Marítimo Data Pipeline](asset/arq-maritimo-data-papiline.png)
+
 ```text
 Fonte de Dados Portuária (Web)
-            ↓
-   Web Scraping — Selenium  (cron do host)
-            ↓
-  Landing Raw — HTML Bruto (Snapshots a cada 4h)
-            ↓
-  [ cron dispara a DAG do Airflow: `docker exec ... dags trigger` ]
-            ↓
+            │
+   Web Scraping — Selenium  (cron do host, a cada 4h)
+            │
+  Landing Raw — HTML Bruto (snapshots)
+            │
+  [ cron dispara a DAG do Airflow: docker exec ... dags trigger ]
+            │
   ┌───────────── Apache Airflow (Docker) ─────────────┐
   │  DAG maritimo_transform                            │
-  │                                                    │
-  │  Transformação Silver ──▶ Modelagem Gold           │
-  │  (Python/pandas/PyArrow)   (transform_gold.py)     │
+  │  transform_silver.py  ──▶  transform_gold.py       │
+  │  (HTML → Parquet)          (→ Star Schema)         │
   └────────────────────────────────────────────────────┘
-            ↓
-  Silver — Parquet Normalizado e Tipado
-            ↓
-  Gold — Parquets Dimensionais (Fatos e Dimensões)
-            ↓
-  Dashboard Executivo & Operacional — Qlik (Qlik Sense / Cloud)  ⏳
+            │
+  Silver — Parquet normalizado e tipado
+            │
+  Gold — Parquets dimensionais (Fatos e Dimensões)
+            │
+  Dashboard Executivo & Operacional — Qlik Sense / Cloud
 ```
 
 ### 1. Landing Raw (`landing_raw/`)
-* Armazenamento dos dados brutos coletados via Selenium;
-* Preservação do dado original para auditoria e histórico de snapshots;
-* Base para reprocessamento completo do pipeline.
+
+* Snapshots HTML brutos coletados via Selenium, nomeados `YYYY-MM-DD_HH-MM-SS_<tabela>.html`.
+* Preserva o dado original para auditoria e permite **reprocessamento completo** do pipeline.
 
 ### 2. Camada Silver (`silver/`)
-* Normalização e limpeza de texto (remoção de acentos, padronização snake_case);
-* Extração e unificação de datas/horas operacionais (`data_hora_*`);
-* Conversão colunar para Apache Parquet de alta performance;
-* Tipagem defensiva contra dados nulos e horários suspensos (`TBC`).
+
+* Normalização e limpeza de texto (remoção de acentos, `snake_case`).
+* Extração e unificação de datas/horas operacionais (`data_hora_*`), tipadas como `datetime64[us]`.
+* Conversão colunar para **Apache Parquet**; tipagem defensiva contra nulos e horários suspensos (`TBC`).
+* **Idempotente:** só processa o HTML que ainda não virou Parquet.
 
 ### 3. Camada Gold (`gold/`)
-* Consolidação e deduplicação de múltiplos snapshots em um Star Schema limpo;
-* **Dimensões:** `dim_navios`, `dim_bercos` (com operador portuário) e `dim_calendario`;
-* **Fatos:** `fct_manobras_previsto_vs_realizado` (cálculo de atrasos em minutos e SLA) e `fct_tempo_fila_barra` (tempo de espera em fundeio).
+
+* Consolidação e deduplicação de múltiplos snapshots em um Star Schema limpo.
+* **Dimensões:** `dim_navios`, `dim_bercos` (com terminal operador) e `dim_calendario`.
+* **Fatos:** `fct_manobras_previsto_vs_realizado` (atraso em minutos e classificação de pontualidade) e `fct_tempo_fila_barra` (tempo de espera no fundeio).
 
 ---
 
-## Orquestração com Apache Airflow
+## 📊 Dashboards (Qlik — PORTO360)
 
-As transformações (silver → gold) são executadas por uma **DAG do Airflow** (`maritimo_transform`), rodando em containers Docker no homelab. A pasta [orquestracao/](orquestracao/) contém as DAGs e o script de disparo; a documentação detalhada está no [README da orquestração](orquestracao/README.md).
+A camada de visualização foi planejada no [catálogo de dados](catalogo_de_dados.md) com **5 abas operacionais**. Abaixo, protótipos das telas construídas sobre o Star Schema da camada Gold.
 
-Decisões de arquitetura em resumo:
+### Cockpit Executivo & Análise de Pontualidade (SLA)
 
-* **Airflow 3.3.2 com LocalExecutor + Postgres** — leve o suficiente para os recursos do homelab (sem Redis/Celery). O Postgres guarda apenas os metadados do Airflow.
-* **Agendamento no cron do host, não no Airflow** (`schedule=None`). A coleta (Selenium) depende de site externo e roda no host; o cron dispara a DAG via `docker exec` de forma **desacoplada**. Se a coleta falhar, a transformação simplesmente não acha dado novo — em vez de a DAG quebrar por falta de insumo.
-* **Idempotência:** a DAG só processa os HTML que ainda não viraram Parquet, então disparar sem dado novo é inofensivo.
+![Dashboard — Análise de Pontualidade e SLA](dashboard/dash1.png)
+
+Auditoria do cumprimento da grade de programação: **manobras atrasadas**, **atraso médio (min)** e **antecedência da previsão (h)**, com dispersão dos desvios de horário, distribuição de pontualidade (No Prazo / Atrasado / Adiantado), heatmap de pontualidade por dia da semana × faixa de horário e ranking dos navios com maior atraso médio.
+
+![Dashboard — Pontualidade (detalhe)](dashboard/dash2.png)
+
+### Eficiência de Barra & Fila de Fundeio
+
+![Dashboard — Eficiência de Barra](dashboard/dash3.png)
+
+Monitoramento da espera e do fluxo de navios na área de fundeio: **tempo médio de espera na barra**, **navios em fundeio**, **tempo até atracação** e **ocupação da barra**, com a evolução temporal da espera (destacando picos de barra fechada), os principais motivos de espera e a grade operacional dos navios aguardando no fundeio.
+
+> As demais abas (Visão Geral, Gestão de Recursos de Rebocadores & Frota, Detalhamento/Auditoria) estão especificadas em detalhe — KPIs, dimensões e memória de cálculo — na **Parte 3** do [catalogo_de_dados.md](catalogo_de_dados.md).
 
 ---
 
-## Volumes no Docker (como o Airflow enxerga o código e os dados)
+## Modelagem Dimensional (Star Schema)
 
-Esta é a parte que costuma gerar confusão em quem está começando, então vale explicar com calma usando o caso real deste projeto. O arquivo de referência é o [`compose.yaml` do Airflow](../../apps/airflow/compose.yaml).
-
-### O problema que os volumes resolvem
-
-Um container é **efêmero e isolado**: o que está dentro dele não enxerga o sistema de arquivos do host, e tudo que ele grava internamente **some quando o container é recriado**. Isso é ruim para dois casos:
-
-1. **Código e dados que estão no host** e precisam ser vistos de dentro do container (as DAGs, os scripts `transform_*.py`, os Parquets).
-2. **Estado que precisa sobreviver** a um `docker compose down` (o banco de metadados do Airflow).
-
-Volumes são a ponte entre o mundo de dentro (container) e o mundo de fora (host/Docker). Existem dois tipos usados aqui.
-
-### Tipo 1 — Bind mount (pasta do host → pasta do container)
-
-Um bind mount "espelha" uma pasta do host para dentro do container. É uma janela: o que muda de um lado, muda do outro em tempo real. No nosso `compose.yaml`:
-
-```yaml
-volumes:
-  - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags        # DAGs
-  - ${AIRFLOW_PROJ_DIR:-.}/logs:/opt/airflow/logs        # logs
-  - ${AIRFLOW_PROJ_DIR:-.}/config:/opt/airflow/config    # config/senhas
-  - ${AIRFLOW_PROJ_DIR:-.}/plugins:/opt/airflow/plugins  # plugins
-
-  # CÓDIGO do pipeline — somente leitura (:ro)
-  - ../../workspace/maritimo-data-pipeline:/opt/airflow/workspace/maritimo-data-pipeline:ro
-  # DADOS do pipeline — leitura e escrita
-  - ../../data/maritimo:/opt/airflow/data/maritimo
+```mermaid
+flowchart LR
+    subgraph Dimensoes["Dimensões"]
+        DIM_NAVIOS["dim_navios"]
+        DIM_BERCOS["dim_bercos"]
+        DIM_CALENDARIO["dim_calendario"]
+    end
+    subgraph Fatos["Tabelas Fato"]
+        FCT_MANOBRAS["fct_manobras_previsto_vs_realizado"]
+        FCT_FILA["fct_tempo_fila_barra"]
+    end
+    DIM_NAVIOS -->|id_navio| FCT_MANOBRAS
+    DIM_BERCOS -->|id_berco| FCT_MANOBRAS
+    DIM_CALENDARIO -->|data_operacao| FCT_MANOBRAS
+    DIM_NAVIOS -->|id_navio| FCT_FILA
+    DIM_BERCOS -->|id_berco_atracado| FCT_FILA
+    DIM_CALENDARIO -->|data_fundeio| FCT_FILA
 ```
 
-A sintaxe é `caminho_no_host:caminho_no_container[:opções]`. Dois pontos merecem destaque:
 
-* **`:ro` (read-only) no código.** O Airflow só precisa **ler/importar** os módulos `transform_silver.py` e `transform_gold.py`. Montar como somente leitura garante que um container jamais altere seu código-fonte por acidente — o container consome o código, não o edita.
-* **Dados sem `:ro` (read-write).** A DAG **grava** os Parquets de silver e gold, então essa pasta precisa ser gravável. É aqui que o resultado do pipeline efetivamente "sai" do container e fica salvo no host, em `~/homelab/data/maritimo`.
-
-Por que bind mount e não copiar os arquivos para dentro da imagem: você edita o código/DAG no host com seu editor normal e a mudança aparece no container **sem rebuild**. É o que torna o ciclo de desenvolvimento rápido.
-
-### Tipo 2 — Named volume (volume gerenciado pelo Docker)
-
-Para o banco de metadados do Airflow (Postgres) não usamos uma pasta do host, e sim um **volume nomeado** gerenciado pelo Docker:
-
-```yaml
-services:
-  postgres:
-    volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
-# ...
-volumes:
-  postgres-db-volume:
-```
-
-Diferença prática em relação ao bind mount:
-
-* O Docker guarda esses dados numa área própria dele (você não aponta uma pasta do host).
-* **Sobrevive a `docker compose down`** (parar/recriar os containers não apaga os metadados).
-* Só é apagado de propósito, com `docker compose down --volumes`.
-
-Isso é ideal para estado de banco de dados: você não quer ficar mexendo nesses arquivos na mão, só quer que eles **persistam** entre reinícios.
-
-### O detalhe de permissões (`user` e UID)
-
-```yaml
-user: "${AIRFLOW_UID:-50000}:0"
-```
-
-Como o bind mount de dados é read-write, os arquivos que o container cria (os Parquets) nascem no host com o dono definido por esse UID. Rodando o container com o **UID do host (1000)**, os Parquets gerados pertencem ao seu usuário (`rafa`), e não ao `root` — senão você teria que usar `sudo` para mexer nos próprios dados de saída. É um detalhe pequeno que evita muita dor de cabeça de permissão.
-
-### Resumo mental
-
-| Precisa que...                                             | Use          | Exemplo aqui                     |
-|------------------------------------------------------------|--------------|----------------------------------|
-| Container leia código/DAGs que você edita no host          | Bind mount `:ro` | `transform_*.py`, `dags/`     |
-| Container grave resultados de volta no host                | Bind mount (rw)  | `data/maritimo` (silver/gold) |
-| Estado de banco persista entre `down`/`up`, sem você gerenciar a pasta | Named volume | metadados do Postgres      |
+| Tabela                               | Tipo      | Papel                                                               |
+| :------------------------------------- | :---------- | :-------------------------------------------------------------------- |
+| `dim_navios`                         | Dimensão | Cadastro único de embarcações (LOA, Boca).                       |
+| `dim_bercos`                         | Dimensão | Berços + mapeamento do terminal operador.                          |
+| `dim_calendario`                     | Dimensão | Tempo contínuo (ano, mês, trimestre, dia da semana).              |
+| `fct_manobras_previsto_vs_realizado` | Fato      | Previsto vs. realizado: atraso em minutos e status de pontualidade. |
+| `fct_tempo_fila_barra`               | Fato      | Tempo de espera (horas) do fundeio até a atracação.              |
 
 ---
 
 ## Tecnologias Utilizadas
 
-* **Linguagem:** Python 3.12
-* **Coleta:** Selenium WebDriver
-* **Processamento & Engenharia:** pandas, PyArrow, NumPy
-* **Armazenamento:** Apache Parquet (colunar)
-* **Modelagem:** Star Schema
-* **Orquestração:** Apache Airflow 3.3.2 (LocalExecutor + Postgres) em Docker — DAG `maritimo_transform` (silver → gold), ver [orquestracao/](orquestracao/)
-* **Infraestrutura:** Docker / Docker Compose (homelab), disparo agendado via cron do host
-* **Governança & Documentação:** Data Documentation as Code (Markdown / Mermaid)
-* **Consumo / BI:** Qlik Sense / Qlik Cloud
-* **Controle de Versão:** Git & GitHub
+
+| Ferramenta                   | Uso                                                         |
+| :----------------------------- | :------------------------------------------------------------ |
+| **Python 3.12**              | Linguagem principal do pipeline.                            |
+| **Selenium WebDriver**       | Coleta (scraping) das tabelas HTML.                         |
+| **pandas / PyArrow / NumPy** | Transformação, tipagem e escrita em Parquet.              |
+| **Apache Parquet**           | Armazenamento colunar das camadas Silver e Gold.            |
+| **Star Schema**              | Modelagem dimensional (Fatos + Dimensões).                 |
+| **Apache Airflow 3.3.2**     | Orquestração da DAG`maritimo_transform` (silver → gold). |
+| **Docker / Docker Compose**  | Infra do Airflow no homelab (LocalExecutor + Postgres).     |
+| **cron (host)**              | Agendamento desacoplado que dispara a DAG.                  |
+| **uv**                       | Gerenciamento de ambiente e dependências.                  |
+| **Markdown / Mermaid**       | Data Documentation as Code (catálogo e diagramas).         |
+| **Qlik Sense / Qlik Cloud**  | Consumo e visualização (BI).                              |
+
+---
+
+## Estrutura do Projeto
+
+```text
+maritimo-data-pipeline/
+├── .gitignore                     # Protege dados brutos, Parquets e segredos (.env)
+├── LICENSE
+├── README.md
+├── pyproject.toml                 # Dependências do projeto (uv)
+├── uv.lock
+│
+├── scraper.py                     # Etapa 1: scraping com Selenium → landing_raw/
+├── transform_silver.py            # Etapa 2: HTML → Parquet (Silver), idempotente
+├── transform_gold.py              # Etapa 3: Silver → Star Schema (Gold)
+│
+├── catalogo_de_dados.md           # Catálogo e dicionário de dados (contrato Eng. ↔ BI)
+├── aprendizados.md                # Decisões técnicas e lições aprendidas
+│
+├── landing_raw/                   # Snapshots HTML brutos (+ exemplos versionados)
+├── silver/                        # Parquets normalizados por tabela (+ *_example.parquet)
+├── gold/                          # Parquets dimensionais (+ *_example.parquet)
+│
+├── asset/                         # Diagrama de arquitetura
+│   └── arq-maritimo-data-papiline.png
+├── dashboard/                     # Protótipos das telas do Qlik (PNG)
+│   ├── dash1.png
+│   ├── dash2.png
+│   └── dash3.png
+│
+└── orquestracao/                  # Camada de orquestração (Airflow)
+    ├── README.md
+    ├── dags/
+    │   └── maritimo_transform.py  # DAG principal: silver >> gold
+    └── scriptcron/
+        ├── trigger_airflow_transform.sh
+        └── crontab.example
+```
+
+> Os arquivos `*_example` são amostras controladas e versionadas para que o pipeline possa ser testado sem o dado real (que fica fora do Git).
+
+---
+
+## Orquestração com Apache Airflow
+
+As transformações (silver → gold) rodam na DAG **`maritimo_transform`**, em containers Docker no homelab. Decisões de arquitetura em resumo:
+
+* **Airflow 3.3.2 com LocalExecutor + Postgres** — leve para os recursos do homelab (sem Redis/Celery). O Postgres guarda só os metadados do Airflow.
+* **Agendamento no cron do host, não no Airflow** (`schedule=None`). A coleta (Selenium) depende de site externo e roda no host; o cron dispara a DAG via `docker exec`, de forma **desacoplada**. Se a coleta falhar, a transformação simplesmente não acha dado novo — em vez de a DAG quebrar por falta de insumo.
+* **Idempotência:** a DAG só processa os HTML que ainda não viraram Parquet, então disparar sem dado novo é inofensivo.
+* **Validações explícitas:** a task de silver falha se a camada ficar vazia; a de gold confirma que todos os artefatos esperados do Star Schema foram gerados.
+
+Detalhes completos (incluindo o script de cron e as explicações sobre volumes no Docker) estão no [README da orquestração](orquestracao/README.md).
+
+---
+
+## Como Reproduzir
+
+### Pré-requisitos
+
+* Python 3.12 e [uv](https://docs.astral.sh/uv/) instalados.
+* Google Chrome / Chromium (para o Selenium).
+* (Opcional) Docker + Docker Compose, para rodar a orquestração.
+
+### 1. Instalar as dependências
+
+```bash
+uv sync
+```
+
+### 2. Configurar o `.env`
+
+Crie um arquivo `.env` na raiz com a URL da fonte de dados:
+
+```env
+URL_DATA1=https://exemplo-do-porto/operacoes
+```
+
+> O `.env` está no `.gitignore` e **não deve ser versionado**.
+
+### 3. (Opcional) Coletar um snapshot
+
+```bash
+uv run python scraper.py
+```
+
+O repositório já traz exemplos em `landing_raw/*_example.html`, então é possível testar as transformações sem rodar o scraper.
+
+### 4. Rodar as transformações
+
+```bash
+# Landing Raw (HTML) → Silver (Parquet)
+uv run python transform_silver.py
+
+# Silver (Parquet) → Gold (Star Schema)
+uv run python transform_gold.py
+```
+
+### 5. (Opcional) Orquestrar com Airflow
+
+Suba o ambiente do Airflow (Docker) e dispare a DAG — ver [orquestracao/](orquestracao/):
+
+```bash
+docker exec airflow-scheduler airflow dags trigger maritimo_transform
+```
+
+### 6. Conectar o Qlik
+
+Aponte o Qlik Sense / Qlik Cloud para os Parquets da camada `gold/` e construa os visuais conforme o mapa do dashboard no [catálogo de dados](catalogo_de_dados.md).
+
+---
+
+## Lições Aprendidas
+
+Detalhadas em [aprendizados.md](aprendizados.md). Em resumo:
+
+* **DRY na Silver:** uma função genérica + um dicionário de regras por tabela, em vez de 5 scripts quase idênticos.
+* **Idempotência:** reprocessar só o que falta torna o disparo da DAG seguro e barato.
+* **Documentation as Code:** catálogo em Markdown + diagramas Mermaid versionam a documentação junto com o código, evitando *documentation drift*.
+* **Decisões conscientes:** Selenium foi escolhido por objetivo de aprendizado, mesmo reconhecendo que `requests`/`BeautifulSoup` seriam mais leves para HTML estático.
 
 ---
 
 ## Próximos Passos
 
-* [x] Criar o catálogo e dicionário de dados oficial ([catalogo_de_dados.md](catalogo_de_dados.md)).
-* [x] Refatorar os scripts de transformação da Silver em um módulo único e modular ([transform_silver.py](transform_silver.py)).
-* [x] Criar gerador de amostras controladas ([prototype/04_transform_examples.py](prototype/04_transform_examples.py)).
-* [x] Estruturar a camada Gold em Star Schema com métricas analíticas ([transform_gold.py](transform_gold.py)).
-* [x] Criar métricas de pontualidade, cálculo de atrasos e tempo de fila na barra.
-* [x] Planejar a arquitetura visual e mapa de dados do Dashboard (5 abas operacionais).
-* [x] Implementar a orquestração das transformações via Apache Airflow (DAG: Silver $\rightarrow$ Gold) — ver [orquestracao/](orquestracao/). *O scraper permanece no cron do host por depender de Selenium/site externo; o cron dispara a DAG de forma desacoplada.*
-* [x] Colocar a orquestração em execução no homelab (Airflow em Docker: api-server + scheduler + dag-processor + Postgres).
-* [ ] Conectar o Qlik Sense / Qlik Cloud aos arquivos Parquet da Camada Gold.
-* [ ] Desenvolver os visuais, gráficos e KPIs no Qlik conforme o mapa do dashboard.
+* [ ]  Conectar o Qlik aos Parquets da Gold e publicar o dashboard.
+* [ ]  Testes automatizados para as funções de transformação.
+* [ ]  Monitoramento/alertas de falha na coleta.
+* [ ]  Refatorar o scraping com `requests`/`BeautifulSoup` (mais leve para o HTML estático).
+* [ ]  Avaliar migração do armazenamento para a nuvem.

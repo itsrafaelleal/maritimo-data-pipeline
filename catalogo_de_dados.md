@@ -260,7 +260,7 @@ flowchart LR
 * **Regra de Construção:**
   1. Identifica cada entrada única de um navio na tabela `navios_fundeados` (`data_hora_fundeado`).
   2. Localiza em `navios_atracados` a primeira atracação desse navio com timestamp maior ou igual à data de fundeio.
-  3. Calcula o tempo de espera em horas: $(\text{data\_hora\_atracagem} - \text{data\_hora\_fundeado}) / 3600$.
+  3. Calcula o tempo de espera em horas: `(data_hora_atracagem - data_hora_fundeado) / 3600`.
 
 | Coluna | Tipo Pandas | Tipo Parquet | Nulo? | Chave | Descrição e Regra de Negócio |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -306,26 +306,26 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 * **Descrição:** Quantidade total de manobras concluídas com sucesso no período selecionado.
 * **Memória de Cálculo:** Contagem de operações que possuem timestamp de confirmação de realização.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.data_hora_manobra_realizada`
-* **Expressão Lógica:** $\text{Contagem}(\text{id\_operacao}) \text{ onde } \text{data\_hora\_manobra\_realizada IS NOT NULL}$
+* **Expressão Lógica:** Contagem de `id_operacao` onde `data_hora_manobra_realizada` não é nulo (`IS NOT NULL`).
 
 #### KPI 1.2: Taxa de Pontualidade (%)
-* **Descrição:** Percentual de manobras que foram executadas rigorosamente no prazo (tolerância de $\pm 30$ minutos) em relação ao total de manobras com horário comparável.
+* **Descrição:** Percentual de manobras que foram executadas rigorosamente no prazo (tolerância de ±30 minutos) em relação ao total de manobras com horário comparável.
 * **Memória de Cálculo:** Total de manobras com status `"No Prazo"` dividido pela soma de manobras com status `"No Prazo"`, `"Atrasado"` e `"Adiantado"`, multiplicado por 100. *(Manobras com TBC, canceladas ou sem previsão são excluídas da base do cálculo).*
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.status_pontualidade`
 * **Expressão Lógica:**
-  $$\frac{\text{Contagem}(\text{id\_operacao} \text{ com status\_pontualidade = 'No Prazo'})}{\text{Contagem}(\text{id\_operacao} \text{ com status\_pontualidade EM ('No Prazo', 'Atrasado', 'Adiantado')})} \times 100$$
+  `(Contagem de id_operacao com status_pontualidade = 'No Prazo') ÷ (Contagem de id_operacao com status_pontualidade EM ('No Prazo', 'Atrasado', 'Adiantado')) × 100`
 
 #### KPI 1.3: Tempo Médio de Espera na Barra (Horas)
 * **Descrição:** Média de horas que os navios aguardam ancorados na fila externa antes de conseguir atracar.
 * **Memória de Cálculo:** Média aritmética da coluna `tempo_espera_horas` para manobras já atracadas.
 * **Tabela e Coluna Gold:** `fct_tempo_fila_barra.tempo_espera_horas`
-* **Expressão Lógica:** $\text{Média}(\text{tempo\_espera\_horas}) \text{ onde } \text{tempo\_espera\_horas IS NOT NULL}$
+* **Expressão Lógica:** Média de `tempo_espera_horas` onde `tempo_espera_horas` não é nulo (`IS NOT NULL`).
 
 #### KPI 1.4: Total de Navios Únicos Atendidos
 * **Descrição:** Quantidade de embarcações distintas que realizaram manobras no período filtrado.
 * **Memória de Cálculo:** Contagem distinta de navios na tabela fato.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.id_navio`
-* **Expressão Lógica:** $\text{Contagem\_Distinta}(\text{id\_navio})$
+* **Expressão Lógica:** Contagem distinta de `id_navio`.
 
 ---
 
@@ -335,18 +335,18 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 * **Objetivo:** Identificar picos de movimentação e dias atípicos de paralisação/queda.
 * **Eixo X (Dimensão):** `dim_calendario.data`
 * **Eixo Y (Medidas):**
-  1. $\text{Contagem}(\text{id\_operacao}) \text{ onde } \text{tipo\_manobra = 'entrada'}$ (Entradas)
-  2. $\text{Contagem}(\text{id\_operacao}) \text{ onde } \text{tipo\_manobra = 'saida'}$ (Saídas)
+  1. Contagem de `id_operacao` onde `tipo_manobra = 'entrada'` (Entradas)
+  2. Contagem de `id_operacao` onde `tipo_manobra = 'saida'` (Saídas)
 
 #### Visual 1.2: Distribuição de Pontualidade (Gráfico de Rosca / Donut)
 * **Objetivo:** Visualizar a fatia de manobras no prazo vs. atrasadas vs. TBC.
 * **Dimensão:** `fct_manobras_previsto_vs_realizado.status_pontualidade`
-* **Medida:** $\text{Contagem}(\text{id\_operacao})$
+* **Medida:** Contagem de `id_operacao`.
 
 #### Visual 1.3: Movimentação por Terminal (Gráfico de Barras Horizontais)
 * **Objetivo:** Comparar o share de operações entre Portonave, JBS, Teporti, etc.
 * **Dimensão:** `dim_bercos.terminal_operador`
-* **Medida:** $\text{Contagem}(\text{id\_operacao})$
+* **Medida:** Contagem de `id_operacao`.
 
 ---
 
@@ -358,19 +358,19 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 #### KPI 2.1: Manobras Atrasadas (> 30 min)
 * **Descrição:** Total de manobras que excederam a janela de 30 minutos de atraso.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.status_pontualidade`
-* **Expressão Lógica:** $\text{Contagem}(\text{id\_operacao}) \text{ onde } \text{status\_pontualidade = 'Atrasado'}$
+* **Expressão Lógica:** Contagem de `id_operacao` onde `status_pontualidade = 'Atrasado'`.
 
 #### KPI 2.2: Atraso Médio Efetivo (Minutos)
 * **Descrição:** Média de minutos de atraso apenas das manobras que efetivamente atrasaram.
 * **Memória de Cálculo:** Média aritmética da coluna `diferenca_minutos_atraso` filtrando valores maiores que 30 minutos.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.diferenca_minutos_atraso`
-* **Expressão Lógica:** $\text{Média}(\text{diferenca\_minutos\_atraso}) \text{ onde } \text{diferenca\_minutos\_atraso > 30}$
+* **Expressão Lógica:** Média de `diferenca_minutos_atraso` onde `diferenca_minutos_atraso > 30`.
 
 #### KPI 2.3: Antecedência Média da Programação (Horas)
 * **Descrição:** Com quantas horas de antecedência média o porto publica a última previsão antes do navio de fato manobrar.
 * **Memória de Cálculo:** Média da coluna `horas_antecedencia_previsao`.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.horas_antecedencia_previsao`
-* **Expressão Lógica:** $\text{Média}(\text{horas\_antecedencia\_previsao})$
+* **Expressão Lógica:** Média de `horas_antecedencia_previsao`.
 
 ---
 
@@ -386,14 +386,14 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 * **Dimensão Linha:** `dim_calendario.dia_semana_nome`
 * **Dimensão Coluna:** `fct_manobras_previsto_vs_realizado.tipo_manobra`
 * **Medida (% Pontualidade):**
-  $$\frac{\text{Contagem}(\text{status\_pontualidade = 'No Prazo'})}{\text{Contagem}(\text{status\_pontualidade EM ('No Prazo', 'Atrasado', 'Adiantado')})}$$
+  `(Contagem de status_pontualidade = 'No Prazo') ÷ (Contagem de status_pontualidade EM ('No Prazo', 'Atrasado', 'Adiantado'))`
 
 #### Visual 2.3: Ranking de Navios com Maior Desvio Médio (Tabela Top 10)
 * **Objetivo:** Identificar armadores e navios recorrentemente atrasados.
 * **Dimensões:** `dim_navios.nome_navio`, `dim_bercos.terminal_operador`
 * **Medidas:**
-  * Total de Manobras: $\text{Contagem}(\text{id\_operacao})$
-  * Desvio Médio (min): $\text{Média}(\text{diferenca\_minutos\_atraso})$
+  * Total de Manobras: Contagem de `id_operacao`.
+  * Desvio Médio (min): Média de `diferenca_minutos_atraso`.
   * % No Prazo: Taxa de Pontualidade
 
 ---
@@ -405,17 +405,17 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 
 #### KPI 3.1: Tempo Médio de Espera na Barra (Horas)
 * **Tabela e Coluna Gold:** `fct_tempo_fila_barra.tempo_espera_horas`
-* **Expressão Lógica:** $\text{Média}(\text{tempo\_espera\_horas})$
+* **Expressão Lógica:** Média de `tempo_espera_horas`.
 
 #### KPI 3.2: Maior Tempo de Espera Registrado (Horas)
 * **Descrição:** Identifica o caso mais extremo de espera de um navio no período.
 * **Tabela e Coluna Gold:** `fct_tempo_fila_barra.tempo_espera_horas`
-* **Expressão Lógica:** $\text{Máximo}(\text{tempo\_espera\_horas})$
+* **Expressão Lógica:** Máximo de `tempo_espera_horas`.
 
 #### KPI 3.3: Navios em Espera Ativa (Fila Atual)
 * **Descrição:** Total de navios que continuam ancorados na barra aguardando vaga no cais.
 * **Tabela e Coluna Gold:** `fct_tempo_fila_barra.status_espera`
-* **Expressão Lógica:** $\text{Contagem}(\text{id\_espera}) \text{ onde } \text{status\_espera = 'Aguardando na Barra (Fundeado)'}$
+* **Expressão Lógica:** Contagem de `id_espera` onde `status_espera = 'Aguardando na Barra (Fundeado)'`.
 
 ---
 
@@ -424,12 +424,12 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 #### Visual 3.1: Linha de Impacto Temporal da Fila de Fundeio (Gráfico de Linha)
 * **Objetivo:** Evidenciar picos de tempo de espera (ex: o salto registrado no evento de barra fechada de 31/08 - 01/09).
 * **Eixo X:** `dim_calendario.data`
-* **Eixo Y:** $\text{Média}(\text{fct\_tempo\_fila\_barra.tempo\_espera\_horas})$
+* **Eixo Y:** Média de `fct_tempo_fila_barra.tempo_espera_horas`.
 
 #### Visual 3.2: Tempo de Espera por Terminal de Destino (Gráfico de Barras)
 * **Objetivo:** Comparar quanto tempo um navio espera na barra dependendo do terminal onde vai atracar.
 * **Dimensão:** `dim_bercos.terminal_operador`
-* **Medida:** $\text{Média}(\text{fct\_tempo\_fila\_barra.tempo\_espera\_horas})$
+* **Medida:** Média de `fct_tempo_fila_barra.tempo_espera_horas`.
 
 #### Visual 3.3: Grade de Status dos Navios Fundeados (Tabela Operacional)
 * **Dimensões:** `dim_navios.nome_navio`, `fct_tempo_fila_barra.data_hora_fundeado`, `fct_tempo_fila_barra.posicao_barra`, `fct_tempo_fila_barra.status_espera`, `dim_bercos.nome_berco`
@@ -445,17 +445,17 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 #### KPI 4.1: Total de Rebocadores Utilizados
 * **Descrição:** Volume total de acionamentos de rebocadores nas manobras realizadas.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.qtd_rebocadores`
-* **Expressão Lógica:** $\text{Soma}(\text{qtd\_rebocadores})$
+* **Expressão Lógica:** Soma de `qtd_rebocadores`.
 
 #### KPI 4.2: Média de Rebocadores por Manobra
 * **Descrição:** Razão média de rebocadores exigidos por manobra no porto.
 * **Tabela e Coluna Gold:** `fct_manobras_previsto_vs_realizado.qtd_rebocadores`
-* **Expressão Lógica:** $\text{Média}(\text{qtd\_rebocadores}) \text{ onde } \text{qtd\_rebocadores > 0}$
+* **Expressão Lógica:** Média de `qtd_rebocadores` onde `qtd_rebocadores > 0`.
 
 #### KPI 4.3: Comprimento Médio da Frota (LOA Médio em Metros)
 * **Descrição:** Porte médio dos navios operados no porto.
 * **Tabela e Coluna Gold:** `dim_navios.loa_metros`
-* **Expressão Lógica:** $\text{Média}(\text{loa\_metros}) / 100 \text{ (caso a unidade bruta esteja em cm)}$
+* **Expressão Lógica:** Média de `loa_metros` ÷ 100 (caso a unidade bruta esteja em cm).
 
 ---
 
@@ -470,14 +470,14 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 #### Visual 4.2: Rebocadores mais Acionados (Gráfico de Barras)
 * **Objetivo:** Mapear os rebocadores líderes de mercado em atuação no canal.
 * **Dimensão:** `fct_manobras_previsto_vs_realizado.rebocadores`
-* **Medida:** $\text{Contagem}(\text{id\_operacao})$
+* **Medida:** Contagem de `id_operacao`.
 
 #### Visual 4.3: Segmentação da Frota por Faixa de Porte (Gráfico de Rosca)
 * **Dimensão Calculada:**
   * `< 200 metros`: `loa_metros < 20000`
   * `200 a 300 metros`: `loa_metros BETWEEN 20000 AND 30000`
   * `> 300 metros`: `loa_metros > 30000`
-* **Medida:** $\text{Contagem\_Distinta}(\text{id\_navio})$
+* **Medida:** Contagem distinta de `id_navio`.
 
 ---
 

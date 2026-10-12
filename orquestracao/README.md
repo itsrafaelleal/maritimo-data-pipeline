@@ -113,11 +113,12 @@ O script `scriptcron/trigger_airflow_transform.sh` verifica se o container do
 Airflow está no ar e dispara a DAG. Ele é configurável por variáveis de
 ambiente (com defaults):
 
-| Variável            | Default              | Descrição                              |
-|---------------------|----------------------|----------------------------------------|
+
+| Variável           | Default              | Descrição                            |
+| --------------------- | ---------------------- | ---------------------------------------- |
 | `AIRFLOW_CONTAINER` | `airflow-scheduler`  | Nome do container com o CLI do Airflow |
 | `AIRFLOW_DAG_ID`    | `maritimo_transform` | ID da DAG a disparar                   |
-| `TRIGGER_LOG_DIR`   | `./logs`             | Diretório dos logs do script           |
+| `TRIGGER_LOG_DIR`   | `./logs`             | Diretório dos logs do script          |
 
 Passos:
 
@@ -134,12 +135,3 @@ crontab -e
 
 Veja `scriptcron/crontab.example` para um exemplo de linha de cron (dispara a
 cada 4 horas, com folga para a coleta terminar antes).
-
----
-
-## Nota sobre segredos
-
-Nenhum segredo é versionado nesta pasta. As DAGs usam apenas caminhos internos
-do container. A configuração sensível do Airflow (credenciais, segredo JWT,
-caminhos absolutos do host) fica em arquivos `.env` que **não** fazem parte
-deste repositório.
