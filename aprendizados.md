@@ -116,3 +116,25 @@ Optou-se por utilizar o **Mermaid**, uma linguagem declarativa que permite escre
    * **Ferramenta `mermaid.live`:** Editor web oficial do Mermaid, excelente para testar, validar a sintaxe e prototipar fluxogramas (Flowcharts), diagramas Entidade-Relacionamento (ERD) e linhas do tempo antes de colar no arquivo `.md` do projeto.
 
 Essa abordagem consolida a prática de **Documentation as Code**, mantendo esquemas de banco e arquiteturas de dados sempre sincronizados com a evolução do código.
+
+---
+
+## 6. Modelagem de KPIs sob a ótica de Eficiência Operacional
+
+### Contexto
+A operação do porto não possuía **nenhum indicador de eficiência**: não havia baseline de pontualidade, de tempo de espera na barra nem de ocupação. O desafio não era só técnico (coletar e tratar o dado), mas de **negócio**: decidir *quais* métricas calcular para que o dado virasse gestão.
+
+### Problema
+É fácil cair na armadilha de só contar volumes ("quantas manobras", "quantos navios"). Volume não mede desempenho — não diz se a operação está boa ou ruim, nem onde está o gargalo. Sem um critério de desenho, os KPIs viram um amontoado de contagens sem leitura gerencial.
+
+### Decisão neste projeto
+Os indicadores foram desenhados sob a ótica de **eficiência global de performance**, decompondo o desempenho da operação em dimensões mensuráveis — na mesma lógica usada para medir eficiência de ativos produtivos:
+
+* **Aderência à programação (pontualidade / SLA):** desvio em minutos entre previsto e realizado, com classificação (No Prazo / Atrasado / Adiantado).
+* **Tempo de espera / lead time:** horas na fila de fundeio até a atracação (eficiência de acesso ao canal).
+* **Ocupação / uso de recurso:** uso de berço e, principalmente, de **rebocadores**.
+
+Além disso, identificou-se o **recurso-restrição** da operação: o **número de rebocadores** é o gargalo que limita a vazão de manobras e dita a formação de fila na barra. A aba de *Gestão de Recursos (Rebocadores & Frota)* foi criada para quantificar justamente esse recurso.
+
+### Aprendizado
+Um pipeline de dados só gera valor quando as métricas da camada Gold respondem a uma **pergunta de negócio**. Partir de um modelo de eficiência (decompor desempenho em dimensões) em vez de sair contando volumes dá foco à modelagem e garante que cada métrica tenha leitura gerencial. Identificar o recurso-gargalo antes de modelar também orienta *onde* vale a pena investir esforço de dado — medir primeiro o que restringe a operação.

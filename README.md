@@ -27,13 +27,15 @@ O pipeline faz **Web Scraping com Selenium**, normaliza os dados na camada **Sil
 * **Sem histórico:** a página mostra só o estado atual; não dá para analisar atrasos, tendências ou comparar dias.
 * **Dado sujo e volátil:** texto com acentos, horários como `"16:45 atb"` ou `"TBC"`, campos nulos e múltiplos formatos de data.
 * **Previsto ≠ Realizado:** a mesma manobra aparece várias vezes com previsões diferentes ao longo do tempo, sem um registro consolidado do que de fato aconteceu.
+* **Operação sem indicadores:** não havia **nenhuma métrica de eficiência operacional** — nem pontualidade, nem lead time de atracação, nem taxa de ocupação. Sem baseline, não há como medir desempenho, dimensionar capacidade ou sustentar melhoria contínua.
+* **Gargalo não medido:** a restrição de capacidade da operação hoje é o **número de rebocadores** — o recurso que limita a vazão de manobras e dita a formação de fila na barra. Sem dado, esse gargalo nunca foi quantificado.
 
 **Objetivo:** construir um pipeline que:
 
 * Captura **snapshots periódicos** (a cada 4h) e preserva o dado bruto para auditoria.
 * Limpa, tipa e normaliza as 5 tabelas na camada **Silver** (Parquet).
 * Consolida tudo em um **Star Schema** na camada **Gold**, deduplicando snapshots e cruzando **previsto vs. realizado**.
-* Calcula métricas de negócio: **taxa de pontualidade**, **atraso em minutos**, **tempo de espera na barra**.
+* Calcula métricas de negócio sob a ótica de **eficiência operacional**: **taxa de pontualidade (SLA)**, **atraso/desvio da programação (min)**, **tempo de espera na barra** e **ocupação de berço**.
 
 **Resultado:** um modelo dimensional com **2 tabelas Fato e 3 Dimensões**, orquestrado e automatizado, pronto para consumo em BI.
 
@@ -89,7 +91,7 @@ Fonte de Dados Portuária (Web)
 
 ## 📊 Dashboards (Qlik — PORTO360)
 
-A camada de visualização foi planejada no [catálogo de dados](catalogo_de_dados.md) com **5 abas operacionais**. Abaixo, protótipos das telas construídas sobre o Star Schema da camada Gold.
+A camada de visualização foi planejada no [catálogo de dados](catalogo_de_dados.md) com **5 abas operacionais**. Os KPIs foram desenhados sob a ótica de **eficiência global de performance** — decompondo o desempenho da operação em disponibilidade, performance e aderência à programação, na mesma lógica usada para medir eficiência de ativos produtivos. Abaixo, protótipos das telas construídas sobre o Star Schema da camada Gold.
 
 ### Cockpit Executivo & Análise de Pontualidade (SLA)
 
@@ -105,7 +107,7 @@ Auditoria do cumprimento da grade de programação: **manobras atrasadas**, **at
 
 Monitoramento da espera e do fluxo de navios na área de fundeio: **tempo médio de espera na barra**, **navios em fundeio**, **tempo até atracação** e **ocupação da barra**, com a evolução temporal da espera (destacando picos de barra fechada), os principais motivos de espera e a grade operacional dos navios aguardando no fundeio.
 
-> As demais abas (Visão Geral, Gestão de Recursos de Rebocadores & Frota, Detalhamento/Auditoria) estão especificadas em detalhe — KPIs, dimensões e memória de cálculo — na **Parte 3** do [catalogo_de_dados.md](catalogo_de_dados.md).
+> As demais abas (Visão Geral, Gestão de Recursos de Rebocadores & Frota, Detalhamento/Auditoria) estão especificadas em detalhe — KPIs, dimensões e memória de cálculo — na **Parte 3** do [catalogo_de_dados.md](catalogo_de_dados.md). A aba de **Rebocadores & Frota** responde diretamente ao gargalo descrito no [Contexto](#contexto-do-projeto): quantificar o uso do recurso que restringe a vazão de manobras.
 
 ---
 

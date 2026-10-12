@@ -145,7 +145,7 @@ Este documento é a referência oficial da modelagem e arquitetura de dados do p
 * **Script de Geração:** `transform_gold.py`
 * **Formato de Armazenamento:** Apache Parquet (armazenado em `gold/*.parquet`)
 * **Modelo Analítico:** Star Schema (Esquema Estrela) otimizado para Qlik Sense, Qlik Cloud e Power BI.
-* **Propósito:** Elimina duplicidades de múltiplos snapshots da Silver, calcula métricas de atraso/pontualidade (SLA), mede tempos de espera na barra e classifica operadores portuários.
+* **Propósito:** Elimina duplicidades de múltiplos snapshots da Silver e consolida métricas de **eficiência operacional** — pontualidade/SLA (atraso e desvio da programação), tempo de espera na barra (fila de fundeio) e uso do recurso-gargalo (rebocadores) — além de classificar os operadores portuários. Os indicadores foram desenhados sob a ótica de **eficiência global de performance**, decompondo o desempenho da operação em dimensões mensuráveis e auditáveis.
 
 ```mermaid
 flowchart LR
@@ -438,7 +438,7 @@ Presentes no topo de todas as abas para navegação associativa no Qlik:
 ---
 
 ## 3.4 Aba 4: Gestão de Recursos (Rebocadores & Frota)
-* **Objetivo de Negócio:** Analisar o dimensionamento de rebocadores empregados nas manobras em relação ao porte das embarcações (LOA e Boca).
+* **Objetivo de Negócio:** Analisar o dimensionamento de rebocadores empregados nas manobras em relação ao porte das embarcações (LOA e Boca). Esta aba atende diretamente ao **recurso-gargalo** da operação: o **número de rebocadores** é a restrição de capacidade que limita a vazão de manobras e dita a formação de fila na barra. Quantificar o uso (acionamentos, média por manobra, correlação com o porte da frota) é o primeiro passo para dimensionar esse recurso e sustentar decisões de capacidade.
 
 ### A. Cartões de Indicadores (KPIs)
 
