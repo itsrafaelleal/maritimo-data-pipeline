@@ -9,6 +9,7 @@ Descrição: Consolida e modela os dados da Camada Silver em um Star Schema
 """
 
 import logging
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -20,8 +21,11 @@ import pandas as pd
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent
-SILVER_DIR = BASE_DIR / "silver"
-GOLD_DIR = BASE_DIR / "gold"
+# Diretório de DADOS: no Airflow o código é montado read-only, então os dados
+# vivem num mount separado (MARITIMO_DATA_DIR). Rodando local, cai no BASE_DIR.
+DATA_DIR = Path(os.environ.get("MARITIMO_DATA_DIR", BASE_DIR))
+SILVER_DIR = DATA_DIR / "silver"
+GOLD_DIR = DATA_DIR / "gold"
 
 logging.basicConfig(
     level=logging.INFO,

@@ -1,6 +1,7 @@
 #%%
 import io
 import logging
+import os
 import unicodedata
 from datetime import datetime
 from pathlib import Path
@@ -12,8 +13,11 @@ import pandas as pd
 # 1. CONFIGURAÇÕES GERAIS E LOGGING
 # ==============================================================================
 BASE_DIR = Path(__file__).resolve().parent
-LANDING_DIR = BASE_DIR / "landing_raw"
-SILVER_DIR = BASE_DIR / "silver"
+# Diretório de DADOS: no Airflow o código é montado read-only, então os dados
+# vivem num mount separado (MARITIMO_DATA_DIR). Rodando local, cai no BASE_DIR.
+DATA_DIR = Path(os.environ.get("MARITIMO_DATA_DIR", BASE_DIR))
+LANDING_DIR = DATA_DIR / "landing_raw"
+SILVER_DIR = DATA_DIR / "silver"
 
 logging.basicConfig(
     level=logging.INFO,
